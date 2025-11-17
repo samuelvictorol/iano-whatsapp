@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png"
+    href="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1198px-WhatsApp.svg.png">
+  <title>IA - WhatsApp</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --fg: #e8eef6;
+      --muted: #99a7b6;
+      --card: rgba(255, 255, 255, .06);
+      --border: rgba(255, 255, 255, .08);
+      --ok: #7af59b;
+      --bad: #ff7b7b;
+      --accent: rgba(122, 245, 155, .18);
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      background: #0f141a;
+    }
+
+    h2 {
+      margin: 0;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .badge {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+
+    .badge.on {
+      background: var(--accent);
+      color: var(--ok);
+      border: 1px solid rgba(122, 245, 155, .35);
+    }
+
+    .badge.off {
+      background: rgba(255, 123, 123, .18);
+      color: var(--bad);
+      border: 1px solid rgba(255, 123, 123, .35);
+    }
+
+    .timer {
+      font-variant-numeric: tabular-nums;
+      opacity: .9;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      opacity: .85;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 65%;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 12px;
+    }
+
+    #qr {
+      width: 100%;
+      aspect-ratio: 1/1;
+      background: #0a0f13;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #qr img {
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    #logs {
+      height: 300px;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      background: #0a0f13;
+      border-radius: 8px;
+      padding: 8px;
+      border: 1px solid var(--border);
+    }
+
+    #logs .line {
+      white-space: pre-wrap;
+      color: #cfe3ff;
+      margin: 2px 0;
+    }
+
+    #logs .ts {
+      color: #86a2c6;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div style="flex-direction: row; flex-wrap: nowrap; display: flex; align-items: center;">
+      <svg style="margin-right: 6px;" width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M12 2C6.477 2 2 6.477 2 12c0 1.86.507 3.6 1.389 5.093L2 22l4.98-1.279A9.955 9.955 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2Z"
+          stroke="currentColor" stroke-width="1.5" />
+        <path d="M7 9.5c.5 3 3.5 6 6.5 6.5M14 16s1-1 2-2" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" />
+      </svg>
+      <h2>
+        WhatsApp I.A</h2>
+    </div>
+  </header>
+  <main>
+    <div class="col" style="width: 380px">
+      <div class="card">
+        <div class="row" style="margin-bottom: 16px;"><strong>QR Code</strong><span id="qrStatus"
+            class="mono">aguardando…</span></div>
+        <div id="qr"><img id="qrImg" alt="QR" /></div>
+      </div>
+      <div class="card">
+        <div class="row" style="margin-bottom: 16px;"><strong>Logs</strong></div>
+        <div id="logs"></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <div class="row" style="margin-bottom: 16px;"><strong>Chats</strong></div>
+        <div id="grid" class="grid"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const chats = new Map();
+    const qrImg = document.getElementById('qrImg');
+    const qrStatus = document.getElementById('qrStatus');
+    const logsEl = document.getElementById('logs');
+
+    function upsertCard({ chatId, aiInControl, holdUntil, title }) {
+      if (!chatId) return;
+      const display = title || chatId;
+      let el = document.getElementById('chat-' + chatId);
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'card';
+        el.id = 'chat-' + chatId;
+        el.innerHTML = `
+          <div class="row">
+            <div class="mono" data-title title=""></div>
+            <div class="badge off" data-badge>IA OFF</div>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <div>IA retoma em:</div>
+            <div class="timer" data-timer>--:--</div>
+          </div>
+        `;
+        grid.prepend(el);
+      }
+      const titleEl = el.querySelector('[data-title]');
+      const badge = el.querySelector('[data-badge]');
+      const timer = el.querySelector('[data-timer]');
+
+      titleEl.textContent = display;
+      titleEl.setAttribute('title', `${display} (${chatId})`);
+
+      chats.set(chatId, { aiInControl: !!aiInControl, holdUntil: holdUntil || 0, el });
+      badge.textContent = aiInControl ? 'IA ON' : 'IA OFF';
+      badge.className = 'badge ' + (aiInControl ? 'on' : 'off');
+      timer.textContent = formatEta(holdUntil - Date.now());
+    }
+
+    function formatEta(ms) {
+      if (!ms || ms <= 0) return '00:00';
+      const s = Math.floor(ms / 1000);
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    }
+
+    setInterval(() => {
+      const now = Date.now();
+      chats.forEach((st) => {
+        const { el, holdUntil } = st;
+        if (!el) return;
+        const timer = el.querySelector('[data-timer]');
+        timer.textContent = formatEta((holdUntil || 0) - now);
+        if ((holdUntil || 0) <= now) {
+          const badge = el.querySelector('[data-badge]');
+          if (badge && !badge.classList.contains('on')) {
+            badge.textContent = 'IA ON';
+            badge.className = 'badge on';
+          }
+        }
+      });
+    }, 1000);
+
+    function addLog(ts, msg) {
+      const line = document.createElement('div');
+      const dt = new Date(ts);
+      line.className = 'line';
+      line.innerHTML = `<span class="ts">[${dt.toLocaleTimeString()}]</span> ${escapeHtml(msg)}`;
+      logsEl.appendChild(line);
+      logsEl.scrollTop = logsEl.scrollHeight;
+    }
+    function escapeHtml(s) { return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+
+    const ev = new EventSource('/events');
+    ev.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data?.type === 'status') (data.items || []).forEach(upsertCard);
+        if (data?.type === 'status_one' && data.item) upsertCard(data.item);
+        if (data?.type === 'qr') { if (data.dataUrl) { qrImg.src = data.dataUrl; qrStatus.textContent = 'escaneie com o WhatsApp'; } }
+        if (data?.type === 'logs' && Array.isArray(data.items)) { data.items.forEach(it => addLog(it.ts, it.msg)); }
+        if (data?.type === 'log' && data.item) { addLog(data.item.ts, data.item.msg); }
+      } catch (_) { }
+    };
+  </script>
+</body>
+
+</html>
