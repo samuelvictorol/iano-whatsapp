@@ -12,16 +12,21 @@ const CLIENT_ID = process.env.WWEBJS_CLIENT_ID || 'whatsapp-bot';
 const STORE_DIR = process.env.WWEBJS_STORE || path.join(__dirname, 'data', 'wwebjs');
 const MEDIA_DIR = process.env.MEDIA_DIR || path.join(__dirname, 'data', 'media');
 
-if (!fs.existsSync(STORE_DIR)) fs.mkdirSync(STORE_DIR, { recursive: true });
-if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR, { recursive: true });
+function ensureDirs () {
+  if (!fs.existsSync(STORE_DIR)) fs.mkdirSync(STORE_DIR, { recursive: true });
+  if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR, { recursive: true });
+}
+ensureDirs();
 
-let clientPromise;
-let client;
+let clientPromise = null;
+let client = null;
 
-function getClient() {
+function getClient () {
   if (clientPromise) return clientPromise;
+
   clientPromise = new Promise((resolve, reject) => {
     bus.emit('log', '[WAPP] Inicializando cliente...');
+
     client = new Client({
       authStrategy: new LocalAuth({ clientId: CLIENT_ID, dataPath: STORE_DIR }),
       puppeteer: {
@@ -48,10 +53,15 @@ function getClient() {
 
     client.on('authenticated', () => bus.emit('log', '[WAPP] authenticated'));
     client.on('auth_failure', (m) => bus.emit('log', `[WAPP] auth_failure: ${m}`));
-    client.on('ready', () => { bus.emit('log', '[WAPP] Ready — conectado.'); resolve(client); });
-    client.on('disconnected', (reason) => bus.emit('log', `[WAPP] disconnected: ${reason}`));
+    client.on('ready', () => {
+      bus.emit('log', '[WAPP] Ready — conectado.');
+      resolve(client);
+    });
+    client.on('disconnected', (reason) => {
+      bus.emit('log', `[WAPP] disconnected: ${reason}`);
+    });
 
-    async function toRec(msg) {
+    async function toRec (msg) {
       const hasMedia = msg.hasMedia;
       let mediaInfo = null;
       const type = msg.type || 'chat';
@@ -88,19 +98,78 @@ function getClient() {
     }
 
     client.on('message', async (msg) => {
-      try { bus.emit('message', await toRec(msg)); }
-      catch (err) { bus.emit('log', `[WAPP message error] ${err?.message || err}`); }
+      try {
+        const rec = await toRec(msg);
+        bus.emit('message', rec);
+      } catch (err) {
+        bus.emit('log', `[WAPP message error] ${err?.message || err}`);
+      }
     });
 
     // ESSENCIAL: captura mensagens enviadas pelo próprio número (humano)
     client.on('message_create', async (msg) => {
-      try { bus.emit('message', await toRec(msg)); }
-      catch (err) { bus.emit('log', `[WAPP message_create error] ${err?.message || err}`); }
+      try {
+        const rec = await toRec(msg);
+        bus.emit('message', rec);
+      } catch (err) {
+        bus.emit('log', `[WAPP message_create error] ${err?.message || err}`);
+      }
     });
 
-    client.initialize().catch(reject);
+    client.initialize().catch((err) => {
+      bus.emit('log', `[WAPP] erro ao inicializar: ${err?.message || err}`);
+      clientPromise = null;
+      reject(err);
+    });
   });
+
   return clientPromise;
 }
 
-module.exports = { getClient, bus, MEDIA_DIR };
+/**
+ * Resetar sessão do WhatsApp:
+ * - destruir client atual
+ * - limpar diretórios de sessão e mídia
+ * - recriar pastas
+ * - reinicializar cliente (novo QR)
+ */
+async function resetSession () {
+  bus.emit('log', '[WAPP] Reset de sessão solicitado via painel.');
+
+  try {
+    if (client) {
+      try {
+        await client.destroy();
+        bus.emit('log', '[WAPP] Client destruído com sucesso.');
+      } catch (e) {
+        bus.emit('log', `[WAPP] erro ao destruir client: ${e?.message || e}`);
+      }
+    }
+
+    client = null;
+    clientPromise = null;
+
+    const dirs = [STORE_DIR, MEDIA_DIR];
+    for (const dir of dirs) {
+      try {
+        if (fs.existsSync(dir)) {
+          fs.rmSync(dir, { recursive: true, force: true });
+        }
+        fs.mkdirSync(dir, { recursive: true });
+        bus.emit('log', `[WAPP] Diretório limpo e recriado: ${dir}`);
+      } catch (e) {
+        bus.emit('log', `[WAPP] erro ao limpar diretório ${dir}: ${e?.message || e}`);
+      }
+    }
+
+    // re-inicializa (vai gerar novo QR)
+    getClient().catch((e) => {
+      bus.emit('log', `[WAPP] erro ao reinicializar após reset: ${e?.message || e}`);
+    });
+  } catch (err) {
+    bus.emit('log', `[WAPP] erro inesperado no resetSession: ${err?.message || err}`);
+    throw err;
+  }
+}
+
+module.exports = { getClient, bus, MEDIA_DIR, resetSession };

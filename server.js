@@ -8,10 +8,10 @@ const cors = require('cors');
 const { EventEmitter } = require('events');
 const { MongoClient } = require('mongodb');
 
-const { getClient, bus: wbus } = require('./whatsapp');
 const { callAI, botPrefix, BOT_RX } = require('./src/services/ai');
 const { transcribeAudioLocal } = require('./src/services/transcribe');
 const { getRecentContext } = require('./src/utils/context');
+const { getClient, bus: wbus, resetSession } = require('./whatsapp');
 
 const app = express();
 app.use(cors());
@@ -56,13 +56,13 @@ function isAiOutboxId(doc) {
   const id = doc?._id || doc?.id || null;
   return id ? aiOutbox.has(id) : false;
 }
-function normText(s){
+function normText(s) {
   return String(s || '')
     .replace(/\s+/g, ' ')
     .replace(/[\u2000-\u200F]/g, '')
     .trim();
 }
-function sha1(s){
+function sha1(s) {
   return crypto.createHash('sha1').update(String(s || '')).digest('hex');
 }
 function markAiDraft(chatId, text) {
@@ -70,7 +70,7 @@ function markAiDraft(chatId, text) {
     const key = `${chatId}|${sha1(normText(text))}`;
     aiOutboxDraft.set(key, Date.now() + 2 * 60 * 1000);
     setTimeout(() => aiOutboxDraft.delete(key), 2 * 60 * 1000 + 5000);
-  } catch {}
+  } catch { }
 }
 function isAiDraft(chatId, text) {
   const key = `${chatId}|${sha1(normText(text))}`;
@@ -380,7 +380,19 @@ app.post('/send-text', async (req, res) => {
       bus.emit('log', `[MONGO SAVE ERROR] ${e?.message || e}`);
     }
   });
+  app.post('/reset-session', async (req, res) => {
+    try {
+      if (TOKEN && req.headers['x-token'] !== TOKEN) {
+        return res.status(401).json({ ok: false, error: 'unauthorized' });
+      }
 
+      await resetSession();
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error('/reset-session error', err);
+      return res.status(500).json({ ok: false, error: err?.message || 'internal error' });
+    }
+  });
   app.listen(PORT, async () => {
     pushLog(`[Logger] on :${PORT}`);
     try { await getClient(); } catch (e) { pushLog(`[Logger] WhatsApp init error: ${e?.message || e}`); }

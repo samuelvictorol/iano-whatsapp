@@ -8,10 +8,28 @@
           <div class="card">
             <div class="row" style="margin-bottom: 16px;">
               <strong>QR Code</strong>
-              <span class="mono">{{ qrStatus }}</span>
+              <div class="row" style="gap: 8px;">
+                <span class="mono">{{ qrStatus }}</span>
+                <q-btn
+                  dense
+                  flat
+                  size="sm"
+                  icon="refresh"
+                  label="Resetar sessão"
+                  :loading="resetLoading"
+                  @click="resetSession"
+                />
+              </div>
             </div>
             <div id="qr">
               <img v-if="qrImgSrc" :src="qrImgSrc" alt="QR" />
+            </div>
+            <div
+              v-if="resetMessage"
+              class="mono"
+              style="margin-top: 8px; font-size: 11px; opacity: .8;"
+            >
+              {{ resetMessage }}
             </div>
           </div>
 
@@ -75,10 +93,13 @@
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 
 const BASE_URL = 'http://localhost:10000';
+const DASH_TOKEN = ''; // se usar token no backend, coloca aqui
 
 // QR
 const qrImgSrc = ref('');
 const qrStatus = ref('aguardando…');
+const resetLoading = ref(false);
+const resetMessage = ref('');
 
 // Logs
 const logs = ref([]); // { ts, msg }
@@ -113,7 +134,6 @@ function upsertChat (payload = {}) {
   };
 
   if (idx === -1) {
-    // equivalente ao grid.prepend
     chats.value.unshift(updated);
   } else {
     chats.value.splice(idx, 1, updated);
@@ -151,6 +171,39 @@ function badgeClass (chat) {
 
 function badgeLabel (chat) {
   return isAiOn(chat) ? 'IA ON' : 'IA OFF';
+}
+
+// NOVO: resetar sessão (apaga data/wwebjs + data/media no backend)
+async function resetSession () {
+  try {
+    resetLoading.value = true;
+    resetMessage.value = '';
+    qrImgSrc.value = '';
+    qrStatus.value = 'reiniciando sessão...';
+
+    const res = await fetch(`${BASE_URL}/reset-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(DASH_TOKEN ? { 'x-token': DASH_TOKEN } : {})
+      }
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+
+    resetMessage.value = 'Sessão reiniciada. Aguarde aparecer um novo QR Code.';
+    qrStatus.value = 'aguardando novo QR...';
+  } catch (err) {
+    console.error('Erro ao resetar sessão', err);
+    resetMessage.value = 'Erro ao resetar sessão. Verifique os logs.';
+    qrStatus.value = 'erro ao resetar';
+  } finally {
+    resetLoading.value = false;
+  }
 }
 
 onMounted(() => {
@@ -221,10 +274,10 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* mesmo CSS que você já tinha */
 .ia-page {
   padding: 0;
 }
-/* ROOT DA PÁGINA (dentro do layout do Quasar) */
 .ia-root {
   --bg: #020617;
   --fg: #e8eef6;
@@ -242,28 +295,10 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
 }
 
-.ia-root *,
-.ia-root *::before,
-.ia-root *::after {
+.ia-root *,.ia-root *::before,.ia-root *::after {
   box-sizing: border-box;
 }
 
-/* TÍTULO SUPERIOR DA PÁGINA */
-.ia-page-header {
-  margin-bottom: 12px;
-}
-
-.ia-page-title-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ia-page-title-row h2 {
-  margin: 0;
-}
-
-/* GRID PRINCIPAL */
 .ia-main {
   display: grid;
   grid-template-columns: 380px 1fr;
@@ -281,7 +316,6 @@ onBeforeUnmount(() => {
   width: 380px;
 }
 
-/* CARDS, ROWS, BADGES */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -329,14 +363,12 @@ onBeforeUnmount(() => {
   max-width: 65%;
 }
 
-/* GRID DE CHATS */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 12px;
 }
 
-/* QR */
 #qr {
   width: 100%;
   aspect-ratio: 1/1;
@@ -353,7 +385,6 @@ onBeforeUnmount(() => {
   max-height: 100%;
 }
 
-/* LOGS */
 #logs {
   height: 300px;
   overflow: auto;
@@ -376,12 +407,10 @@ onBeforeUnmount(() => {
   margin-right: 6px;
 }
 
-/* RESPONSIVO */
 @media (max-width: 900px) {
   .ia-main {
     grid-template-columns: 1fr;
   }
-
   .ia-col-left {
     width: 100%;
   }
