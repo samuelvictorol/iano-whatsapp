@@ -25,7 +25,6 @@ const DB_NAME = 'iano_whatsapp';
 const COL_NAME = 'messages';
 const MSG_TTL_DAYS = Number(process.env.MSG_TTL_DAYS || 0);
 const HUMAN_HOLD_MS = Math.max(60_000, Number(process.env.HUMAN_HOLD_MS || 300_000));
-const BOT_NAME = process.env.BOT_NAME || 'Bot';
 
 let mongoClient, mongoDb, mongoCol;
 async function ensureMongo() {
@@ -51,14 +50,21 @@ function markAiMessage(msg) {
     if (!id) return;
     aiOutbox.add(id);
     setTimeout(() => aiOutbox.delete(id), 10 * 60 * 1000); // expira em 10min
-  } catch {}
+  } catch { }
 }
 function isAiOutboxId(doc) {
   const id = doc?._id || doc?.id || null;
   return id ? aiOutbox.has(id) : false;
 }
-function normText(s){ return String(s||'').replace(/\s+/g,' ').replace(/[\u2000-\u200F]/g,'').trim(); }
-function sha1(s){ return crypto.createHash('sha1').update(String(s||'' )).digest('hex'); }
+function normText(s){
+  return String(s || '')
+    .replace(/\s+/g, ' ')
+    .replace(/[\u2000-\u200F]/g, '')
+    .trim();
+}
+function sha1(s){
+  return crypto.createHash('sha1').update(String(s || '')).digest('hex');
+}
 function markAiDraft(chatId, text) {
   try {
     const key = `${chatId}|${sha1(normText(text))}`;
@@ -72,19 +78,6 @@ function isAiDraft(chatId, text) {
   return !!(exp && exp > Date.now());
 }
 
-function sha1(s){ return crypto.createHash('sha1').update(String(s||'' )).digest('hex'); }
-function markAiDraft(chatId, text) {
-  try {
-    const key = `${chatId}|${sha1(text)}`;
-    aiOutboxDraft.set(key, Date.now() + 60 * 1000);
-    setTimeout(() => aiOutboxDraft.delete(key), 61 * 1000);
-  } catch {}
-}
-function isAiDraft(chatId, text) {
-  const key = `${chatId}|${sha1(text)}`;
-  const exp = aiOutboxDraft.get(key);
-  return !!(exp && exp > Date.now());
-}
 
 const holdMap = new Map();
 const queueMap = new Map();
@@ -92,12 +85,27 @@ const seenMap = new Map();
 const aiState = new Map(); // chatId -> { version:number }
 const processedInbounds = new Set(); // msgId -> TTL
 const lastAISendAt = new Map(); // chatId -> ts do último envio da IA
-function getVersion(chatId){ return (aiState.get(chatId) || {version:0}).version; }
-function bumpVersion(chatId){ const s = aiState.get(chatId) || {version:0}; s.version++; aiState.set(chatId, s); return s.version; }
+function getVersion(chatId) { return (aiState.get(chatId) || { version: 0 }).version; }
+function bumpVersion(chatId) { const s = aiState.get(chatId) || { version: 0 }; s.version++; aiState.set(chatId, s); return s.version; }
 function setHold(chatId, msFromNow) { const holdUntil = Date.now() + msFromNow; holdMap.set(chatId, holdUntil); emitStatusOne(chatId); }
 function getHold(chatId) { return holdMap.get(chatId) || 0; }
 function aiAllowed(chatId) { const h = getHold(chatId); return !(h && h > Date.now()); }
-function enqueueChat(chatId, fn) { const prev = queueMap.get(chatId) || Promise.resolve(); const next = prev.then(() => fn()).catch(() => {}).finally(() => {}); queueMap.set(chatId, next); return next; }
+
+function enqueueChat(chatId, fn) {
+  const prev = queueMap.get(chatId) || Promise.resolve();
+
+  const next = prev
+    .then(() => fn())
+    .catch((err) => {
+      const msg = err?.stack || err?.message || String(err);
+      pushLog(`[QUEUE] erro na fila do chat ${chatId}: ${msg}`);
+      console.error('[QUEUE ERROR]', chatId, err);
+    });
+
+  queueMap.set(chatId, next);
+  return next;
+}
+
 
 // === TÍTULO DO CHAT (nome/telefone) ===
 const chatTitleCache = new Map(); // chatId -> title
@@ -106,8 +114,8 @@ function formatMsisdn(digits = '') {
   if (!digits) return '';
   if (digits.startsWith('55')) {
     const rest = digits.slice(2);
-    if (rest.length === 11) { const ddd = rest.slice(0,2); const p1 = rest.slice(2,7); const p2 = rest.slice(7); return `+55 (${ddd}) ${p1}-${p2}`; }
-    if (rest.length === 10) { const ddd = rest.slice(0,2); const p1 = rest.slice(2,6); const p2 = rest.slice(6); return `+55 (${ddd}) ${p1}-${p2}`; }
+    if (rest.length === 11) { const ddd = rest.slice(0, 2); const p1 = rest.slice(2, 7); const p2 = rest.slice(7); return `+55 (${ddd}) ${p1}-${p2}`; }
+    if (rest.length === 10) { const ddd = rest.slice(0, 2); const p1 = rest.slice(2, 6); const p2 = rest.slice(6); return `+55 (${ddd}) ${p1}-${p2}`; }
   }
   return digits ? `+${digits}` : '';
 }
@@ -128,7 +136,7 @@ async function getContactTitle(chatId) {
     if (name2 && String(name2).trim()) return String(name2).trim();
     const number2 = contact?.number || contact?.id?.user || extractPhone(chatId);
     if (number2) return formatMsisdn(String(number2));
-  } catch(_) {}
+  } catch (_) { }
   const msisdn = extractPhone(chatId);
   return formatMsisdn(msisdn) || chatId;
 }
@@ -141,19 +149,19 @@ async function ensureChatTitle(chatId) {
 async function touchChat(chatId, ts = Date.now()) { seenMap.set(chatId, ts); await ensureChatTitle(chatId); emitStatusOne(chatId); }
 
 // Typing helpers
-function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-function estimateTypingMs(text){ const len = String(text||'').length; return Math.max(900, Math.min(6000, Math.round(len*40))); }
-async function withTyping(chatId, versionAtStart, work){
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function estimateTypingMs(text) { const len = String(text || '').length; return Math.max(900, Math.min(6000, Math.round(len * 40))); }
+async function withTyping(chatId, versionAtStart, work) {
   const client = await getClient();
   const chat = await client.getChatById(chatId);
-  const ping = async () => { try { await chat.sendStateTyping(); } catch(_){} };
+  const ping = async () => { try { await chat.sendStateTyping(); } catch (_) { } };
   await ping();
   const keep = setInterval(ping, 4500);
   try {
     return await work({ client, chat, versionAtStart });
   } finally {
     clearInterval(keep);
-    try { await chat.clearState(); } catch(_) {}
+    try { await chat.clearState(); } catch (_) { }
   }
 }
 
@@ -161,7 +169,7 @@ async function withTyping(chatId, versionAtStart, work){
 const sseClients = new Set();
 let lastQrDataUrl = null;
 const logBuffer = [];
-function pushLog(msg){ const item = { ts: Date.now(), msg: String(msg) }; logBuffer.push(item); if (logBuffer.length > 200) logBuffer.shift(); for (const c of sseClients) c.write(`data: ${JSON.stringify({ type: 'log', item })}\n\n`); }
+function pushLog(msg) { const item = { ts: Date.now(), msg: String(msg) }; logBuffer.push(item); if (logBuffer.length > 200) logBuffer.shift(); for (const c of sseClients) c.write(`data: ${JSON.stringify({ type: 'log', item })}\n\n`); }
 
 app.get('/events', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -173,7 +181,7 @@ app.get('/events', async (req, res) => {
   if (logBuffer.length) res.write(`data: ${JSON.stringify({ type: 'logs', items: logBuffer.slice(-50) })}\n\n`);
 
   try {
-    const since = Date.now() - 24*60*60*1000;
+    const since = Date.now() - 24 * 60 * 60 * 1000;
     const cursor = mongoCol.aggregate([
       { $match: { timestamp: { $gte: since } } },
       { $sort: { timestamp: -1 } },
@@ -188,7 +196,7 @@ app.get('/events', async (req, res) => {
       items.push({ chatId, holdUntil: getHold(chatId), aiInControl: aiAllowed(chatId), title });
     }
     res.write(`data: ${JSON.stringify({ type: 'status', items })}\n\n`);
-  } catch(e) {}
+  } catch (e) { }
 
   req.on('close', () => sseClients.delete(res));
 });
@@ -207,35 +215,35 @@ setInterval(() => {
 
 // Helpers
 
-function markInboundProcessed(doc){
+function markInboundProcessed(doc) {
   const id = doc?._id || doc?.id;
   if (!id) return;
   processedInbounds.add(id);
   setTimeout(() => processedInbounds.delete(id), 3 * 60 * 1000); // 3 min
 }
-function wasInboundProcessed(doc){
+function wasInboundProcessed(doc) {
   const id = doc?._id || doc?.id;
   return id ? processedInbounds.has(id) : false;
 }
 
 
-function isAIBody(text=''){ return BOT_RX.test(normText(String(text))); }
-function isBotReply(text=''){ return BOT_RX.test(String(text)); }
-function isAudioMessage(doc){ if (doc?.type && String(doc.type).toLowerCase().includes('audio')) return true; const mt = doc?.media?.mimetype || ''; return /^audio\//i.test(mt); }
-function isVisualMedia(doc){ const t=(doc?.type||'').toLowerCase(); if (t==='image'||t==='video'||t==='sticker') return true; const mt=doc?.media?.mimetype||''; return /^image\//i.test(mt)||/^video\//i.test(mt); }
+function isAIBody(text = '') { return BOT_RX.test(normText(String(text))); }
+function isBotReply(text = '') { return BOT_RX.test(String(text)); }
+function isAudioMessage(doc) { if (doc?.type && String(doc.type).toLowerCase().includes('audio')) return true; const mt = doc?.media?.mimetype || ''; return /^audio\//i.test(mt); }
+function isVisualMedia(doc) { const t = (doc?.type || '').toLowerCase(); if (t === 'image' || t === 'video' || t === 'sticker') return true; const mt = doc?.media?.mimetype || ''; return /^image\//i.test(mt) || /^video\//i.test(mt); }
 
 // send-text
 app.post('/send-text', async (req, res) => {
   try {
-    if (TOKEN && req.headers['x-token'] !== TOKEN) return res.status(401).json({ ok:false, error:'unauthorized' });
+    if (TOKEN && req.headers['x-token'] !== TOKEN) return res.status(401).json({ ok: false, error: 'unauthorized' });
     const { chatId, text } = req.body || {};
-    if (!chatId || !text) return res.status(400).json({ ok:false, error:'chatId/text obrigatórios' });
+    if (!chatId || !text) return res.status(400).json({ ok: false, error: 'chatId/text obrigatórios' });
     const client = await getClient();
     await client.sendMessage(chatId, text);
-    return res.json({ ok:true });
+    return res.json({ ok: true });
   } catch (err) {
     console.error('/send-text error', err);
-    return res.status(500).json({ ok:false, error: err?.message || 'internal error' });
+    return res.status(500).json({ ok: false, error: err?.message || 'internal error' });
   }
 });
 
@@ -243,7 +251,7 @@ app.post('/send-text', async (req, res) => {
   await ensureMongo();
 
   wbus.on('log', (msg) => pushLog(msg));
-  wbus.on('qr', ({ dataUrl }) => { lastQrDataUrl = dataUrl; for (const c of sseClients) c.write(`data: ${JSON.stringify({ type:'qr', dataUrl })}\n\n`); });
+  wbus.on('qr', ({ dataUrl }) => { lastQrDataUrl = dataUrl; for (const c of sseClients) c.write(`data: ${JSON.stringify({ type: 'qr', dataUrl })}\n\n`); });
 
   wbus.on('message', async (rec) => {
     try {
@@ -258,7 +266,7 @@ app.post('/send-text', async (req, res) => {
         body: rec.body || null,
         hasMedia: !!rec.hasMedia,
         media: rec.media && rec.media.file ? { file: rec.media.file, mimetype: rec.media.mimetype, size: rec.media.size }
-             : (rec.media && rec.media.mimetype ? { mimetype: rec.media.mimetype } : null),
+          : (rec.media && rec.media.mimetype ? { mimetype: rec.media.mimetype } : null),
         ack: rec.ack, // status da mensagem (0=enviado, 1=entregue, 2=lida)
         isStatus: !!rec.isStatus,
         timestamp: rec.timestamp || Date.now(),
@@ -276,13 +284,14 @@ app.post('/send-text', async (req, res) => {
       await touchChat(doc.chatId, doc.timestamp);
 
       // SAÍDA (nós): humano → hold imediato e invalida IA em curso/queue
-      if (doc.fromMe && doc.body && !doc.hasMedia) { if (!(isAIBody(doc.body) || isAiOutboxId(doc) || isAiDraft(doc.chatId, doc.body))) {
+      if (doc.fromMe && doc.body && !doc.hasMedia) {
+        if (!(isAIBody(doc.body) || isAiOutboxId(doc) || isAiDraft(doc.chatId, doc.body))) {
           const last = lastAISendAt.get(doc.chatId) || 0;
           if (Date.now() - last < 5000) { /* ignora eco imediato da IA */ }
           else {
-          pushLog(`[HUMANO] takeover em ${doc.chatId} — cooldown iniciado`);
-                      bumpVersion(doc.chatId);
-                      setHold(doc.chatId, HUMAN_HOLD_MS);
+            pushLog(`[HUMANO] takeover em ${doc.chatId} — cooldown iniciado`);
+            bumpVersion(doc.chatId);
+            setHold(doc.chatId, HUMAN_HOLD_MS);
           }
         }
       }
@@ -312,32 +321,59 @@ app.post('/send-text', async (req, res) => {
 
         enqueueChat(doc.chatId, async () => {
           if (getVersion(doc.chatId) !== versionAtStart || !aiAllowed(doc.chatId)) return;
-
           await withTyping(doc.chatId, versionAtStart, async ({ client, chat }) => {
-            const ai = await callAI({ chatId: doc.chatId, text: cleanBody, context_messages: ctx });
+            let ai;
+            try {
+              ai = await callAI({
+                chatId: doc.chatId,
+                text: cleanBody,
+                context_messages: ctx
+              });
+            } catch (err) {
+              const msg = err?.message || String(err);
+              pushLog(`[AI ERROR] chat=${doc.chatId} ao chamar OpenAI: ${msg}`);
+
+              // Mensagem de fallback pro cliente
+              const fallback = botPrefix(
+                'Tive um problema para responder agora 😅. Pode tentar de novo em alguns instantes?'
+              );
+              const sent = await client.sendMessage(doc.chatId, fallback);
+              lastAISendAt.set(doc.chatId, Date.now());
+              markAiMessage(sent);
+              return;
+            }
+
+            const msgs = Array.isArray(ai.ia_reply_messages)
+              ? ai.ia_reply_messages.filter(Boolean)
+              : [];
+
+            if (!msgs.length) {
+              pushLog(`[AI WARN] chat=${doc.chatId} sem ia_reply_messages válidas. Enviando fallback.`);
+              const fallback = botPrefix(
+                'Não consegui entender muito bem. Pode repetir por favor?'
+              );
+              const sent = await client.sendMessage(doc.chatId, fallback);
+              lastAISendAt.set(doc.chatId, Date.now());
+              markAiMessage(sent);
+              return;
+            }
 
             if (getVersion(doc.chatId) !== versionAtStart || !aiAllowed(doc.chatId)) return;
 
-            const msgs = Array.isArray(ai.ia_reply_messages) ? ai.ia_reply_messages : [];
-            const preview = msgs[0] || '';
+            const preview = msgs[0];
             await sleep(estimateTypingMs(preview));
 
             for (const m of msgs) {
               if (getVersion(doc.chatId) !== versionAtStart || !aiAllowed(doc.chatId)) return;
-              await client.sendMessage(doc.chatId, botPrefix(String(m)));
-              await sleep(300 + Math.random()*400);
-            }
-
-            if (ai.catalog_url && typeof ai.catalog_url === 'string' && ai.catalog_url.trim() !== '') {
-              if (getVersion(doc.chatId) !== versionAtStart || !aiAllowed(doc.chatId)) return;
-              const base = (process.env.CATALOGO_BASE_URL || '').replace(/\/$/, '');
-              const _text2 = botPrefix(`Veja opções no catálogo: ${base}${ai.catalog_url}`);
-              markAiDraft(doc.chatId, _text2);
-              const _link = await client.sendMessage(doc.chatId, _text2);
+              const text = botPrefix(String(m));
+              markAiDraft(doc.chatId, text);
+              const sent = await client.sendMessage(doc.chatId, text);
               lastAISendAt.set(doc.chatId, Date.now());
-              markAiMessage(_link);
+              markAiMessage(sent);
+              await sleep(300 + Math.random() * 400);
             }
           });
+
         });
       }
     } catch (e) {
