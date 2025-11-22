@@ -1,4 +1,4 @@
-# 🤖 AitoWhatsapp – Agente de IA Configurável no WhatsApp
+# 🤖 IanoWhatsapp – Agente de IA Configurável no WhatsApp
 
 > Conecte seu WhatsApp Web com a Api da OpenAi, configure seus prompts e veja tudo em tempo real num painel com interface amigável. Adicione dados adicionais, catálogo de serviços ou produtos e controle quando a IA fala ou o humano assume – tudo via QR Code.
 
