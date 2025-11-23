@@ -1,6 +1,7 @@
+<!-- IniciarPage -->
 <template>
   <q-page class="ia-page">
-    <div class="ia-root">
+    <div class="ia-root q-mt-md">
       <!-- CONTEÚDO PRINCIPAL -->
       <main class="ia-main">
         <!-- COL ESQUERDA: QR + LOGS -->
@@ -9,7 +10,16 @@
             <div class="row" style="margin-bottom: 16px;">
               <strong>QR Code</strong>
               <div class="row" style="gap: 8px;">
-                <span class="mono">{{ qrStatus }}</span>
+                <!-- <span class="mono">{{ qrStatus }}</span> -->
+                <q-btn
+                  dense
+                  flat
+                  size="sm"
+                  icon="play_arrow"
+                  label="Iniciar sessão"
+                  :loading="startLoading"
+                  @click="startSessionFromStorage"
+                />
                 <q-btn
                   dense
                   flat
@@ -34,8 +44,9 @@
           </div>
 
           <div class="card">
-            <div class="row" style="margin-bottom: 16px;">
+            <div class="row no-wrap justify-between" style="margin-bottom: 16px;">
               <strong>Logs</strong>
+              <q-btn label="Limpar" color="info" @click="cleanLogs()"></q-btn>
             </div>
             <div id="logs" ref="logsEl">
               <div
@@ -91,15 +102,26 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
+import { useQuasar } from 'quasar';
+import { api } from 'boot/axios';
 
-const BASE_URL = 'http://localhost:10000';
-const DASH_TOKEN = ''; // se usar token no backend, coloca aqui
+const $q = useQuasar();
+
+const STORAGE_KEYS = {
+  openai: 'config_openai',
+  ai: 'config_ai_settings',
+  data: 'config_ai_data_items'
+};
+
+// BASE_URL vindo do axios do boot
+const BASE_URL = (api.defaults.baseURL || 'http://localhost:10000').replace(/\/+$/, '');
 
 // QR
 const qrImgSrc = ref('');
 const qrStatus = ref('aguardando…');
 const resetLoading = ref(false);
 const resetMessage = ref('');
+const startLoading = ref(false);
 
 // Logs
 const logs = ref([]); // { ts, msg }
@@ -140,6 +162,10 @@ function upsertChat (payload = {}) {
   }
 }
 
+function cleanLogs(){
+  logs.value = []
+}
+
 function addLog (ts, msg) {
   const tsVal = ts || Date.now();
   logs.value.push({
@@ -173,7 +199,7 @@ function badgeLabel (chat) {
   return isAiOn(chat) ? 'IA ON' : 'IA OFF';
 }
 
-// NOVO: resetar sessão (apaga data/wwebjs + data/media no backend)
+// Resetar sessão (apaga data/wwebjs + data/media no backend)
 async function resetSession () {
   try {
     resetLoading.value = true;
@@ -181,18 +207,9 @@ async function resetSession () {
     qrImgSrc.value = '';
     qrStatus.value = 'reiniciando sessão...';
 
-    const res = await fetch(`${BASE_URL}/reset-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(DASH_TOKEN ? { 'x-token': DASH_TOKEN } : {})
-      }
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok || !data.ok) {
-      throw new Error(data.error || `HTTP ${res.status}`);
+    const { data } = await api.post('/reset-session');
+    if (!data?.ok) {
+      throw new Error(data?.error || 'Erro ao resetar sessão.');
     }
 
     resetMessage.value = 'Sessão reiniciada. Aguarde aparecer um novo QR Code.';
@@ -203,6 +220,107 @@ async function resetSession () {
     qrStatus.value = 'erro ao resetar';
   } finally {
     resetLoading.value = false;
+  }
+}
+
+// Iniciar sessão usando configs salvas no localStorage (mesmo formato do /start-session do backend)
+async function startSessionFromStorage () {
+  try {
+    startLoading.value = true;
+
+    const rawOpenai = localStorage.getItem(STORAGE_KEYS.openai);
+    if (!rawOpenai) {
+      $q.notify({
+        type: 'warning',
+        message: 'Configure OpenAI e Mongo na tela de Configurações antes de iniciar a sessão.'
+      });
+      return;
+    }
+
+    const openaiConf = JSON.parse(rawOpenai);
+    const mongoUri = (openaiConf.MONGO_CONNECTION_STRING || '').trim();
+    const apiKey = (openaiConf.OPENAI_API_KEY || '').trim();
+    const model = openaiConf.OPENAI_CHAT_MODEL || 'gpt-4.1-mini';
+    const temperature = openaiConf.OPENAI_TEMPERATURE ?? 0.8;
+    const maxTokens = openaiConf.OPENAI_MAX_TOKENS ?? 900;
+    const transcribeModel = openaiConf.TRANSCRIBE_MODEL || 'whisper-1';
+
+    if (!mongoUri || !apiKey) {
+      $q.notify({
+        type: 'warning',
+        message: 'Falta informar Mongo ou OPENAI_API_KEY nas Configurações.'
+      });
+      return;
+    }
+
+    // AI config
+    let aiConf = {
+      IA_CONTEXT_MAX_MINUTES: 5,
+      HUMAN_HOLD_MS: 300000,
+      AI_CONTEXT: '',
+      AI_RULES: '',
+      AI_METADATA: '',
+      BOT_NAME: 'IANO Bot'
+    };
+
+    const rawAI = localStorage.getItem(STORAGE_KEYS.ai);
+    if (rawAI) {
+      const parsed = JSON.parse(rawAI);
+      aiConf = {
+        IA_CONTEXT_MAX_MINUTES: parsed.IA_CONTEXT_MAX_MINUTES ?? 5,
+        HUMAN_HOLD_MS: parsed.HUMAN_HOLD_MS ?? 300000,
+        AI_CONTEXT: parsed.AI_CONTEXT || '',
+        AI_RULES: parsed.AI_RULES || '',
+        AI_METADATA: parsed.AI_METADATA || '',
+        BOT_NAME: parsed.BOT_NAME || 'IANO Bot'
+      };
+    }
+
+    // Data items (catálogo)
+    let dataItems = [];
+    const rawData = localStorage.getItem(STORAGE_KEYS.data);
+    if (rawData) {
+      const parsed = JSON.parse(rawData);
+      if (Array.isArray(parsed)) {
+        dataItems = parsed;
+      }
+    }
+
+    const payload = {
+      mongoUri,
+      openai: {
+        OPENAI_API_KEY: apiKey,
+        OPENAI_CHAT_MODEL: model,
+        OPENAI_TEMPERATURE: temperature,
+        OPENAI_MAX_TOKENS: maxTokens,
+        TRANSCRIBE_MODEL: transcribeModel
+      },
+      ai: {
+        ...aiConf,
+        dataItems
+      }
+    };
+
+    const { data } = await api.post('/start-session', payload);
+    if (!data?.ok) {
+      throw new Error(data?.error || 'Erro ao iniciar sessão.');
+    }
+
+    $q.notify({
+      type: 'positive',
+      message: 'Sessão iniciada/reconfigurada! Escaneie o QR quando aparecer.'
+    });
+
+    qrStatus.value = 'aguardando QR...';
+    resetMessage.value = '';
+  } catch (err) {
+    console.error('Erro ao iniciar sessão', err);
+    $q.notify({
+      type: 'negative',
+      message: 'Erro ao iniciar sessão: ' + (err?.message || 'verifique o backend.')
+    });
+  } finally {
+    startLoading.value = false;
   }
 }
 
@@ -220,7 +338,7 @@ onMounted(() => {
     { deep: true }
   );
 
-  // SSE no backend em localhost:10000
+  // SSE no backend
   eventSource = new EventSource(`${BASE_URL}/events`);
   eventSource.onmessage = (e) => {
     try {
@@ -251,7 +369,7 @@ onMounted(() => {
     }
   };
 
-  // Timer para atualizar contagem regressiva
+  // Timer para atualizar contagem regressiva (takeover / IA ON/OFF)
   timerId = window.setInterval(() => {
     const now = Date.now();
     chats.value = chats.value.map(chat => ({
@@ -274,12 +392,10 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* mesmo CSS que você já tinha */
 .ia-page {
   padding: 0;
 }
 .ia-root {
-  --bg: #020617;
   --fg: #e8eef6;
   --muted: #99a7b6;
   --card: rgba(255, 255, 255, .06);
@@ -288,7 +404,6 @@ onBeforeUnmount(() => {
   --bad: #ff7b7b;
   --accent: rgba(122, 245, 155, .18);
 
-  background: var(--bg);
   color: var(--fg);
   min-height: 100%;
   padding: 12px;

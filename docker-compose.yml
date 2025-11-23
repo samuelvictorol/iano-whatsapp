@@ -7,23 +7,25 @@ services:
     ports:
       - "10000:10000"
     environment:
+      # Porta HTTP do backend
       - PORT=10000
-      - MONGODB_URI=${MONGODB_URI}
-      - MONGO_DB=${MONGO_DB}
-      - MONGO_COL=${MONGO_COL}
-      - MSG_TTL_DAYS=${MSG_TTL_DAYS}
-      - WWEBJS_CLIENT_ID=${WWEBJS_CLIENT_ID}
+
+      # TTL opcional das mensagens no Mongo (0 = sem expirar)
+      - MSG_TTL_DAYS=${MSG_TTL_DAYS:-0}
+
+      # ID da sessão do WhatsApp (só pra diferenciar se quiser rodar múltiplos)
+      - WWEBJS_CLIENT_ID=${WWEBJS_CLIENT_ID:-whatsapp-bot}
+
+      # Diretórios de sessão/mídia (batendo com o Dockerfile e whatsapp.js)
       - WWEBJS_STORE=/app/data/wwebjs
       - MEDIA_DIR=/app/data/media
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_CHAT_MODEL=${OPENAI_CHAT_MODEL}
-      - TRANSCRIBE_MODEL=${TRANSCRIBE_MODEL}
-      - BOT_NAME=${BOT_NAME}
-      - DASH_TOKEN=${DASH_TOKEN}
-      - HUMAN_HOLD_MS=${HUMAN_HOLD_MS}
+
+      # Puppeteer/Chromium (você já setou no Dockerfile, mas não faz mal repetir)
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
       - PUPPETEER_SKIP_DOWNLOAD=true
+
     volumes:
+      # Persiste sessão do WhatsApp e mídias no host
       - ./data:/app/data
 
   frontend:
@@ -33,6 +35,5 @@ services:
     container_name: iano_whatsapp-frontend
     ports:
       - "9000:9000"
-    # Se quiser, pode setar vars aqui também
     environment:
       - NODE_ENV=development

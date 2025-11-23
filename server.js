@@ -8,10 +8,15 @@ const cors = require('cors');
 const { EventEmitter } = require('events');
 const { MongoClient } = require('mongodb');
 
-const { callAI, botPrefix, BOT_RX } = require('./src/services/ai');
+const { callAI, botPrefix, isBotText } = require('./src/services/ai');
 const { transcribeAudioLocal } = require('./src/services/transcribe');
 const { getRecentContext } = require('./src/utils/context');
 const { getClient, bus: wbus, resetSession } = require('./whatsapp');
+const {
+  setRuntimeConfig,
+  getRuntimeConfig,
+  hasRuntimeConfig
+} = require('./src/config/runtime-config');
 
 const app = express();
 app.use(cors());
@@ -19,65 +24,90 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = Number(process.env.PORT || 10000);
-const TOKEN = process.env.DASH_TOKEN || '';
-const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_CONNECTION_STRING;
-const DB_NAME = 'iano_whatsapp';
-const COL_NAME = 'messages';
+const TOKEN = process.env.DASH_TOKEN || ''; // opcional
+const DB_NAME = process.env.MONGO_DB || 'iano_whatsapp';
+const COL_NAME = process.env.MONGO_COL || 'messages';
 const MSG_TTL_DAYS = Number(process.env.MSG_TTL_DAYS || 0);
-const HUMAN_HOLD_MS = Math.max(60_000, Number(process.env.HUMAN_HOLD_MS || 300_000));
 
-let mongoClient, mongoDb, mongoCol;
-async function ensureMongo() {
-  if (!mongoClient) {
-    mongoClient = await MongoClient.connect(MONGO_URI, { ignoreUndefined: true });
-    mongoDb = mongoClient.db(DB_NAME);
-    mongoCol = mongoDb.collection(COL_NAME);
-    await mongoCol.createIndex({ chatId: 1, fromMe: 1, timestamp: -1 });
-    if (MSG_TTL_DAYS > 0) await mongoCol.createIndex({ createdAt: 1 }, { expireAfterSeconds: MSG_TTL_DAYS * 86400 });
+let mongoClient = null;
+let mongoDb = null;
+let mongoCol = null;
+
+async function connectMongo(mongoUri, dbName = DB_NAME, colName = COL_NAME) {
+  if (!mongoUri) {
+    throw new Error('mongoUri obrigatório');
   }
+
+  if (mongoClient) {
+    try {
+      await mongoClient.close();
+    } catch (_) {}
+    mongoClient = null;
+    mongoDb = null;
+    mongoCol = null;
+  }
+
+  mongoClient = await MongoClient.connect(mongoUri, { ignoreUndefined: true });
+  mongoDb = mongoClient.db(dbName);
+  mongoCol = mongoDb.collection(colName);
+
+  await mongoCol.createIndex({ chatId: 1, fromMe: 1, timestamp: -1 });
+  if (MSG_TTL_DAYS > 0) {
+    await mongoCol.createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: MSG_TTL_DAYS * 86400 }
+    );
+  }
+
+  console.log(`[🍃] Mongo conectado em ${mongoUri} | DB=${dbName} | Col=${colName}`);
 }
 
+// Event bus interno
 const bus = new EventEmitter();
 
-// Estado por chat
-
-// Rastreador de mensagens enviadas pela IA (para não disparar hold)
+// === ESTADO / CONTROLES ===
 const aiOutbox = new Set(); // guarda IDs das mensagens que NÓS enviamos como IA
 const aiOutboxDraft = new Map(); // key: chatId|sha1(normText(text)) -> expireTs (2min)
+
 function markAiMessage(msg) {
   try {
     const id = msg?.id?._serialized || msg?.id || null;
     if (!id) return;
     aiOutbox.add(id);
-    setTimeout(() => aiOutbox.delete(id), 10 * 60 * 1000); // expira em 10min
-  } catch { }
+    setTimeout(() => aiOutbox.delete(id), 10 * 60 * 1000);
+  } catch {}
 }
+
 function isAiOutboxId(doc) {
   const id = doc?._id || doc?.id || null;
   return id ? aiOutbox.has(id) : false;
 }
+
 function normText(s) {
   return String(s || '')
     .replace(/\s+/g, ' ')
     .replace(/[\u2000-\u200F]/g, '')
     .trim();
 }
+
 function sha1(s) {
   return crypto.createHash('sha1').update(String(s || '')).digest('hex');
 }
+
 function markAiDraft(chatId, text) {
   try {
     const key = `${chatId}|${sha1(normText(text))}`;
-    aiOutboxDraft.set(key, Date.now() + 2 * 60 * 1000);
+    const exp = Date.now() + 2 * 60 * 1000;
+    aiOutboxDraft.set(key, exp);
     setTimeout(() => aiOutboxDraft.delete(key), 2 * 60 * 1000 + 5000);
-  } catch { }
+  } catch {}
 }
+
 function isAiDraft(chatId, text) {
   const key = `${chatId}|${sha1(normText(text))}`;
   const exp = aiOutboxDraft.get(key);
   return !!(exp && exp > Date.now());
 }
-
 
 const holdMap = new Map();
 const queueMap = new Map();
@@ -85,11 +115,37 @@ const seenMap = new Map();
 const aiState = new Map(); // chatId -> { version:number }
 const processedInbounds = new Set(); // msgId -> TTL
 const lastAISendAt = new Map(); // chatId -> ts do último envio da IA
-function getVersion(chatId) { return (aiState.get(chatId) || { version: 0 }).version; }
-function bumpVersion(chatId) { const s = aiState.get(chatId) || { version: 0 }; s.version++; aiState.set(chatId, s); return s.version; }
-function setHold(chatId, msFromNow) { const holdUntil = Date.now() + msFromNow; holdMap.set(chatId, holdUntil); emitStatusOne(chatId); }
-function getHold(chatId) { return holdMap.get(chatId) || 0; }
-function aiAllowed(chatId) { const h = getHold(chatId); return !(h && h > Date.now()); }
+
+function getVersion(chatId) {
+  return (aiState.get(chatId) || { version: 0 }).version;
+}
+function bumpVersion(chatId) {
+  const s = aiState.get(chatId) || { version: 0 };
+  s.version++;
+  aiState.set(chatId, s);
+  return s.version;
+}
+function setHold(chatId, msFromNow) {
+  const holdUntil = Date.now() + msFromNow;
+  holdMap.set(chatId, holdUntil);
+  emitStatusOne(chatId);
+}
+function getHold(chatId) {
+  return holdMap.get(chatId) || 0;
+}
+function aiAllowed(chatId) {
+  const h = getHold(chatId);
+  return !(h && h > Date.now());
+}
+function getHumanHoldMs() {
+  try {
+    const cfg = getRuntimeConfig();
+    const ms = Number(cfg.ai?.HUMAN_HOLD_MS ?? 300000);
+    return Math.max(60_000, ms);
+  } catch {
+    return 300000;
+  }
+}
 
 function enqueueChat(chatId, fn) {
   const prev = queueMap.get(chatId) || Promise.resolve();
@@ -106,16 +162,28 @@ function enqueueChat(chatId, fn) {
   return next;
 }
 
-
 // === TÍTULO DO CHAT (nome/telefone) ===
 const chatTitleCache = new Map(); // chatId -> title
-function extractPhone(chatId = '') { return String(chatId).split('@')[0].replace(/\D/g, ''); }
+
+function extractPhone(chatId = '') {
+  return String(chatId).split('@')[0].replace(/\D/g, '');
+}
 function formatMsisdn(digits = '') {
   if (!digits) return '';
   if (digits.startsWith('55')) {
     const rest = digits.slice(2);
-    if (rest.length === 11) { const ddd = rest.slice(0, 2); const p1 = rest.slice(2, 7); const p2 = rest.slice(7); return `+55 (${ddd}) ${p1}-${p2}`; }
-    if (rest.length === 10) { const ddd = rest.slice(0, 2); const p1 = rest.slice(2, 6); const p2 = rest.slice(6); return `+55 (${ddd}) ${p1}-${p2}`; }
+    if (rest.length === 11) {
+      const ddd = rest.slice(0, 2);
+      const p1 = rest.slice(2, 7);
+      const p2 = rest.slice(7);
+      return `+55 (${ddd}) ${p1}-${p2}`;
+    }
+    if (rest.length === 10) {
+      const ddd = rest.slice(0, 2);
+      const p1 = rest.slice(2, 6);
+      const p2 = rest.slice(6);
+      return `+55 (${ddd}) ${p1}-${p2}`;
+    }
   }
   return digits ? `+${digits}` : '';
 }
@@ -132,11 +200,12 @@ async function getContactTitle(chatId) {
       if (number) return formatMsisdn(String(number));
     }
     const contact = await client.getContactById(chatId).catch(() => null);
-    const name2 = contact?.pushname || contact?.name || contact?.shortName || contact?.verifiedName;
+    const name2 =
+      contact?.pushname || contact?.name || contact?.shortName || contact?.verifiedName;
     if (name2 && String(name2).trim()) return String(name2).trim();
     const number2 = contact?.number || contact?.id?.user || extractPhone(chatId);
     if (number2) return formatMsisdn(String(number2));
-  } catch (_) { }
+  } catch (_) {}
   const msisdn = extractPhone(chatId);
   return formatMsisdn(msisdn) || chatId;
 }
@@ -146,116 +215,284 @@ async function ensureChatTitle(chatId) {
   chatTitleCache.set(chatId, title);
   return title;
 }
-async function touchChat(chatId, ts = Date.now()) { seenMap.set(chatId, ts); await ensureChatTitle(chatId); emitStatusOne(chatId); }
+async function touchChat(chatId, ts = Date.now()) {
+  seenMap.set(chatId, ts);
+  await ensureChatTitle(chatId);
+  emitStatusOne(chatId);
+}
 
 // Typing helpers
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function estimateTypingMs(text) { const len = String(text || '').length; return Math.max(900, Math.min(6000, Math.round(len * 40))); }
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+function estimateTypingMs(text) {
+  const len = String(text || '').length;
+  return Math.max(900, Math.min(6000, Math.round(len * 40)));
+}
 async function withTyping(chatId, versionAtStart, work) {
   const client = await getClient();
   const chat = await client.getChatById(chatId);
-  const ping = async () => { try { await chat.sendStateTyping(); } catch (_) { } };
+  const ping = async () => {
+    try {
+      await chat.sendStateTyping();
+    } catch (_) {}
+  };
   await ping();
   const keep = setInterval(ping, 4500);
   try {
     return await work({ client, chat, versionAtStart });
   } finally {
     clearInterval(keep);
-    try { await chat.clearState(); } catch (_) { }
+    try {
+      await chat.clearState();
+    } catch (_) {}
   }
 }
 
-// SSE + logs + QR
+// === SSE + logs + QR ===
 const sseClients = new Set();
 let lastQrDataUrl = null;
 const logBuffer = [];
-function pushLog(msg) { const item = { ts: Date.now(), msg: String(msg) }; logBuffer.push(item); if (logBuffer.length > 200) logBuffer.shift(); for (const c of sseClients) c.write(`data: ${JSON.stringify({ type: 'log', item })}\n\n`); }
+
+function pushLog(msg) {
+  const item = { ts: Date.now(), msg: String(msg) };
+  logBuffer.push(item);
+  if (logBuffer.length > 200) logBuffer.shift();
+  for (const c of sseClients) {
+    c.write(`data: ${JSON.stringify({ type: 'log', item })}\n\n`);
+  }
+}
 
 app.get('/events', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
-  sseClients.add(res);
-  if (lastQrDataUrl) res.write(`data: ${JSON.stringify({ type: 'qr', dataUrl: lastQrDataUrl })}\n\n`);
-  if (logBuffer.length) res.write(`data: ${JSON.stringify({ type: 'logs', items: logBuffer.slice(-50) })}\n\n`);
 
-  try {
-    const since = Date.now() - 24 * 60 * 60 * 1000;
-    const cursor = mongoCol.aggregate([
-      { $match: { timestamp: { $gte: since } } },
-      { $sort: { timestamp: -1 } },
-      { $group: { _id: '$chatId', last: { $first: '$timestamp' } } },
-      { $limit: 200 }
-    ]);
-    const items = [];
-    for await (const r of cursor) {
-      const chatId = r._id;
-      seenMap.set(chatId, r.last);
-      const title = await ensureChatTitle(chatId);
-      items.push({ chatId, holdUntil: getHold(chatId), aiInControl: aiAllowed(chatId), title });
+  sseClients.add(res);
+
+  if (lastQrDataUrl) {
+    res.write(`data: ${JSON.stringify({ type: 'qr', dataUrl: lastQrDataUrl })}\n\n`);
+  }
+  if (logBuffer.length) {
+    res.write(
+      `data: ${JSON.stringify({ type: 'logs', items: logBuffer.slice(-50) })}\n\n`
+    );
+  }
+
+  // status inicial (últimos chats vistos) – só se Mongo estiver configurado
+  if (mongoCol) {
+    try {
+      const since = Date.now() - 24 * 60 * 60 * 1000;
+      const cursor = mongoCol.aggregate([
+        { $match: { timestamp: { $gte: since } } },
+        { $sort: { timestamp: -1 } },
+        { $group: { _id: '$chatId', last: { $first: '$timestamp' } } },
+        { $limit: 200 }
+      ]);
+
+      const items = [];
+      for await (const r of cursor) {
+        const chatId = r._id;
+        seenMap.set(chatId, r.last);
+        const title = await ensureChatTitle(chatId);
+        items.push({
+          chatId,
+          holdUntil: getHold(chatId),
+          aiInControl: aiAllowed(chatId),
+          title
+        });
+      }
+
+      res.write(`data: ${JSON.stringify({ type: 'status', items })}\n\n`);
+    } catch (e) {
+      console.error('[SSE status error]', e);
     }
-    res.write(`data: ${JSON.stringify({ type: 'status', items })}\n\n`);
-  } catch (e) { }
+  }
 
   req.on('close', () => sseClients.delete(res));
 });
+
 function emitStatusOne(chatId) {
   const holdUntil = getHold(chatId);
   const title = chatTitleCache.get(chatId) || extractPhone(chatId) || chatId;
-  const payload = { type: 'status_one', item: { chatId, holdUntil, aiInControl: aiAllowed(chatId), title } };
+  const payload = {
+    type: 'status_one',
+    item: { chatId, holdUntil, aiInControl: aiAllowed(chatId), title }
+  };
   for (const c of sseClients) c.write(`data: ${JSON.stringify(payload)}\n\n`);
 }
+
 setInterval(() => {
-  const items = Array.from(new Set([...seenMap.keys(), ...holdMap.keys()])).map(chatId => ({
-    chatId, holdUntil: getHold(chatId), aiInControl: aiAllowed(chatId), title: chatTitleCache.get(chatId) || extractPhone(chatId) || chatId
-  }));
-  for (const c of sseClients) c.write(`data: ${JSON.stringify({ type: 'status', items })}\n\n`);
+  const items = Array.from(new Set([...seenMap.keys(), ...holdMap.keys()])).map(
+    (chatId) => ({
+      chatId,
+      holdUntil: getHold(chatId),
+      aiInControl: aiAllowed(chatId),
+      title: chatTitleCache.get(chatId) || extractPhone(chatId) || chatId
+    })
+  );
+  for (const c of sseClients) {
+    c.write(`data: ${JSON.stringify({ type: 'status', items })}\n\n`);
+  }
 }, 5000);
 
-// Helpers
-
+// Helpers inbound
 function markInboundProcessed(doc) {
   const id = doc?._id || doc?.id;
   if (!id) return;
   processedInbounds.add(id);
-  setTimeout(() => processedInbounds.delete(id), 3 * 60 * 1000); // 3 min
+  setTimeout(() => processedInbounds.delete(id), 3 * 60 * 1000);
 }
 function wasInboundProcessed(doc) {
   const id = doc?._id || doc?.id;
   return id ? processedInbounds.has(id) : false;
 }
 
-
-function isAIBody(text = '') { return BOT_RX.test(normText(String(text))); }
-function isBotReply(text = '') { return BOT_RX.test(String(text)); }
-function isAudioMessage(doc) { if (doc?.type && String(doc.type).toLowerCase().includes('audio')) return true; const mt = doc?.media?.mimetype || ''; return /^audio\//i.test(mt); }
-function isVisualMedia(doc) { const t = (doc?.type || '').toLowerCase(); if (t === 'image' || t === 'video' || t === 'sticker') return true; const mt = doc?.media?.mimetype || ''; return /^image\//i.test(mt) || /^video\//i.test(mt); }
+function isAIBody(text = '') {
+  return isBotText(normText(String(text)));
+}
+function isBotReply(text = '') {
+  return isBotText(String(text));
+}
+function isAudioMessage(doc) {
+  if (doc?.type && String(doc.type).toLowerCase().includes('audio')) return true;
+  const mt = doc?.media?.mimetype || '';
+  return /^audio\//i.test(mt);
+}
+function isVisualMedia(doc) {
+  const t = (doc?.type || '').toLowerCase();
+  if (t === 'image' || t === 'video' || t === 'sticker') return true;
+  const mt = doc?.media?.mimetype || '';
+  return /^image\//i.test(mt) || /^video\//i.test(mt);
+}
 
 // send-text
 app.post('/send-text', async (req, res) => {
   try {
-    if (TOKEN && req.headers['x-token'] !== TOKEN) return res.status(401).json({ ok: false, error: 'unauthorized' });
+    if (TOKEN && req.headers['x-token'] !== TOKEN) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
     const { chatId, text } = req.body || {};
-    if (!chatId || !text) return res.status(400).json({ ok: false, error: 'chatId/text obrigatórios' });
+    if (!chatId || !text) {
+      return res.status(400).json({ ok: false, error: 'chatId/text obrigatórios' });
+    }
     const client = await getClient();
     await client.sendMessage(chatId, text);
     return res.json({ ok: true });
   } catch (err) {
     console.error('/send-text error', err);
-    return res.status(500).json({ ok: false, error: err?.message || 'internal error' });
+    return res
+      .status(500)
+      .json({ ok: false, error: err?.message || 'internal error' });
   }
 });
 
-(async () => {
-  await ensureMongo();
+// === NOVO: /start-session ===
+// Recebe mongoUri + config OpenAI/IA vindas do painel e inicializa tudo.
+app.post('/start-session', async (req, res) => {
+  try {
+    if (TOKEN && req.headers['x-token'] !== TOKEN) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
 
+    const { mongoUri, mongoDbName, mongoColName, openai, ai } = req.body || {};
+
+    if (!mongoUri || !openai || !openai.OPENAI_API_KEY) {
+      return res.status(400).json({
+        ok: false,
+        error: 'mongoUri e openai.OPENAI_API_KEY são obrigatórios'
+      });
+    }
+
+    const runtimeConfig = {
+      mongo: {
+        uri: mongoUri,
+        dbName: mongoDbName || DB_NAME,
+        colName: mongoColName || COL_NAME
+      },
+      openai: {
+        apiKey: openai.OPENAI_API_KEY,
+        model: openai.OPENAI_CHAT_MODEL || 'gpt-4.1-mini',
+        temperature: Number(
+          openai.OPENAI_TEMPERATURE !== undefined
+            ? openai.OPENAI_TEMPERATURE
+            : 0.8
+        ),
+        maxTokens: Number(
+          openai.OPENAI_MAX_TOKENS !== undefined
+            ? openai.OPENAI_MAX_TOKENS
+            : 900
+        ),
+        transcribeModel: openai.TRANSCRIBE_MODEL || 'whisper-1'
+      },
+      ai: {
+        IA_CONTEXT_MAX_MINUTES: Number(ai?.IA_CONTEXT_MAX_MINUTES ?? 5),
+        HUMAN_HOLD_MS: Number(ai?.HUMAN_HOLD_MS ?? 300000),
+        AI_CONTEXT: ai?.AI_CONTEXT || '',
+        AI_RULES: ai?.AI_RULES || '',
+        AI_METADATA: ai?.AI_METADATA || '',
+        BOT_NAME: ai?.BOT_NAME || 'IANO Bot',
+        dataItems: Array.isArray(ai?.dataItems) ? ai.dataItems : []
+      }
+    };
+
+    setRuntimeConfig(runtimeConfig);
+    await connectMongo(
+      runtimeConfig.mongo.uri,
+      runtimeConfig.mongo.dbName,
+      runtimeConfig.mongo.colName
+    );
+
+    pushLog(
+      `[CONFIG] Sessão iniciada. Mongo conectado e OpenAI configurada (model=${runtimeConfig.openai.model}).`
+    );
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('/start-session error', err);
+    return res
+      .status(500)
+      .json({ ok: false, error: err?.message || 'internal error' });
+  }
+});
+
+// Reset de sessão do WhatsApp
+app.post('/reset-session', async (req, res) => {
+  try {
+    if (TOKEN && req.headers['x-token'] !== TOKEN) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
+
+    await resetSession();
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('/reset-session error', err);
+    return res
+      .status(500)
+      .json({ ok: false, error: err?.message || 'internal error' });
+  }
+});
+
+// Integração com WhatsApp bus
+(async () => {
   wbus.on('log', (msg) => pushLog(msg));
-  wbus.on('qr', ({ dataUrl }) => { lastQrDataUrl = dataUrl; for (const c of sseClients) c.write(`data: ${JSON.stringify({ type: 'qr', dataUrl })}\n\n`); });
+
+  console.log(
+    '[🍃] Mongo ainda não conectado. Use /start-session no painel para configurar mongoUri + OpenAI.'
+  );
+
+  wbus.on('qr', ({ dataUrl }) => {
+    lastQrDataUrl = dataUrl;
+    for (const c of sseClients) {
+      c.write(`data: ${JSON.stringify({ type: 'qr', dataUrl })}\n\n`);
+    }
+  });
 
   wbus.on('message', async (rec) => {
     try {
-      if (!mongoCol) return;
+      if (!mongoCol) return; // ainda não configurado via /start-session
+
       const doc = {
         _id: rec.id || `${rec.chatId || 'chat'}:${rec.timestamp}`,
         chatId: rec.chatId,
@@ -265,8 +502,12 @@ app.post('/send-text', async (req, res) => {
         type: rec.type,
         body: rec.body || null,
         hasMedia: !!rec.hasMedia,
-        media: rec.media && rec.media.file ? { file: rec.media.file, mimetype: rec.media.mimetype, size: rec.media.size }
-          : (rec.media && rec.media.mimetype ? { mimetype: rec.media.mimetype } : null),
+        media:
+          rec.media && rec.media.file
+            ? { file: rec.media.file, mimetype: rec.media.mimetype, size: rec.media.size }
+            : rec.media && rec.media.mimetype
+              ? { mimetype: rec.media.mimetype }
+              : null,
         ack: rec.ack, // status da mensagem (0=enviado, 1=entregue, 2=lida)
         isStatus: !!rec.isStatus,
         timestamp: rec.timestamp || Date.now(),
@@ -287,11 +528,12 @@ app.post('/send-text', async (req, res) => {
       if (doc.fromMe && doc.body && !doc.hasMedia) {
         if (!(isAIBody(doc.body) || isAiOutboxId(doc) || isAiDraft(doc.chatId, doc.body))) {
           const last = lastAISendAt.get(doc.chatId) || 0;
-          if (Date.now() - last < 5000) { /* ignora eco imediato da IA */ }
-          else {
+          if (Date.now() - last < 5000) {
+            // ignora eco imediato da IA
+          } else {
             pushLog(`[HUMANO] takeover em ${doc.chatId} — cooldown iniciado`);
             bumpVersion(doc.chatId);
-            setHold(doc.chatId, HUMAN_HOLD_MS);
+            setHold(doc.chatId, getHumanHoldMs());
           }
         }
       }
@@ -300,12 +542,18 @@ app.post('/send-text', async (req, res) => {
       if (!doc.fromMe && !doc.isStatus) {
         const cleanBody = (doc.body || '').trim();
 
-        // Dedupe: evita responder duas vezes o mesmo inbound
-        if (wasInboundProcessed(doc)) { bus.emit('log', `[ROUTE] inbound duplicado ignorado ${doc.chatId}`); return; }
+        // Dedupe
+        if (wasInboundProcessed(doc)) {
+          bus.emit('log', `[ROUTE] inbound duplicado ignorado ${doc.chatId}`);
+          return;
+        }
         markInboundProcessed(doc);
 
         if (isVisualMedia(doc) || cleanBody === '') {
-          bus.emit('log', `[ROUTE] IA ignorada (mídia visual/body vazio) chat=${doc.chatId} type=${doc.type}`);
+          bus.emit(
+            'log',
+            `[ROUTE] IA ignorada (mídia visual/body vazio) chat=${doc.chatId} type=${doc.type}`
+          );
           bus.emit('human:queue', doc);
           return;
         }
@@ -321,6 +569,7 @@ app.post('/send-text', async (req, res) => {
 
         enqueueChat(doc.chatId, async () => {
           if (getVersion(doc.chatId) !== versionAtStart || !aiAllowed(doc.chatId)) return;
+
           await withTyping(doc.chatId, versionAtStart, async ({ client, chat }) => {
             let ai;
             try {
@@ -333,7 +582,6 @@ app.post('/send-text', async (req, res) => {
               const msg = err?.message || String(err);
               pushLog(`[AI ERROR] chat=${doc.chatId} ao chamar OpenAI: ${msg}`);
 
-              // Mensagem de fallback pro cliente
               const fallback = botPrefix(
                 'Tive um problema para responder agora 😅. Pode tentar de novo em alguns instantes?'
               );
@@ -348,7 +596,9 @@ app.post('/send-text', async (req, res) => {
               : [];
 
             if (!msgs.length) {
-              pushLog(`[AI WARN] chat=${doc.chatId} sem ia_reply_messages válidas. Enviando fallback.`);
+              pushLog(
+                `[AI WARN] chat=${doc.chatId} sem ia_reply_messages válidas. Enviando fallback.`
+              );
               const fallback = botPrefix(
                 'Não consegui entender muito bem. Pode repetir por favor?'
               );
@@ -373,28 +623,20 @@ app.post('/send-text', async (req, res) => {
               await sleep(300 + Math.random() * 400);
             }
           });
-
         });
       }
     } catch (e) {
-      bus.emit('log', `[MONGO SAVE ERROR] ${e?.message || e}`);
+      bus.emit('log', `[MONGO SAVE/ROUTE ERROR] ${e?.message || e}`);
     }
   });
-  app.post('/reset-session', async (req, res) => {
-    try {
-      if (TOKEN && req.headers['x-token'] !== TOKEN) {
-        return res.status(401).json({ ok: false, error: 'unauthorized' });
-      }
 
-      await resetSession();
-      return res.json({ ok: true });
-    } catch (err) {
-      console.error('/reset-session error', err);
-      return res.status(500).json({ ok: false, error: err?.message || 'internal error' });
-    }
-  });
   app.listen(PORT, async () => {
     pushLog(`[Logger] on :${PORT}`);
-    try { await getClient(); } catch (e) { pushLog(`[Logger] WhatsApp init error: ${e?.message || e}`); }
+    console.log('🟢 Server Online - http://localhost:' + PORT);
+    try {
+      await getClient();
+    } catch (e) {
+      pushLog(`[Logger] WhatsApp init error: ${e?.message || e}`);
+    }
   });
 })();

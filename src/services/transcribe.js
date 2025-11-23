@@ -1,17 +1,30 @@
 // src/services/transcribe.js
 const fs = require('fs');
 const path = require('path');
-const OpenAI = require('openai');
+const { getRuntimeConfig, hasRuntimeConfig } = require('../config/runtime-config');
+const { getOpenAIClient } = require('./openai-client');
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const TRANSCRIBE_MODEL = process.env.TRANSCRIBE_MODEL || 'whisper-1';
-
-/** Transcreve arquivo de áudio local. Retorna texto ou null. */
+/**
+ * Transcreve arquivo de áudio local via OpenAI.
+ * Usa modelo dinâmico da config (openai.transcribeModel).
+ * Retorna texto ou null.
+ */
 async function transcribeAudioLocal(filePath, mimetype = '') {
   try {
     if (!filePath || !fs.existsSync(filePath)) return null;
+    if (!hasRuntimeConfig()) return null;
+
+    const cfg = getRuntimeConfig();
+    const model = cfg.openai?.transcribeModel || 'whisper-1';
+    const openai = getOpenAIClient();
+
     const fileStream = fs.createReadStream(path.resolve(filePath));
-    const resp = await openai.audio.transcriptions.create({ file: fileStream, model: TRANSCRIBE_MODEL });
+
+    const resp = await openai.audio.transcriptions.create({
+      file: fileStream,
+      model
+    });
+
     const text = resp?.text || null;
     return text && String(text).trim() ? String(text).trim() : null;
   } catch (err) {
@@ -19,4 +32,5 @@ async function transcribeAudioLocal(filePath, mimetype = '') {
     return null;
   }
 }
+
 module.exports = { transcribeAudioLocal };
