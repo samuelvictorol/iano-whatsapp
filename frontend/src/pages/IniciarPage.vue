@@ -1,7 +1,7 @@
 <!-- IniciarPage -->
 <template>
-  <q-page class="ia-page">
-    <div class="ia-root q-mt-md">
+  <q-page class="ia-page bg-primary">
+    <div class="ia-root">
       <!-- CONTEÚDO PRINCIPAL -->
       <main class="ia-main">
         <!-- COL ESQUERDA: QR + LOGS -->
@@ -42,27 +42,6 @@
               {{ resetMessage }}
             </div>
           </div>
-
-          <div class="card">
-            <div class="row no-wrap justify-between" style="margin-bottom: 16px;">
-              <strong>Logs</strong>
-              <q-btn label="Limpar" color="info" @click="cleanLogs()"></q-btn>
-            </div>
-            <div id="logs" ref="logsEl">
-              <div
-                v-for="(log, index) in logs"
-                :key="index"
-                class="line"
-              >
-                <span class="ts">[{{ formatTime(log.ts) }}]</span>
-                <span>{{ log.msg }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- COL DIREITA: CHATS -->
-        <div class="ia-col-right">
           <div class="card">
             <div class="row" style="margin-bottom: 16px;">
               <strong>Chats</strong>
@@ -90,6 +69,25 @@
                     {{ formatEta(chat.remainingMs) }}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COL DIREITA: CHATS -->
+        <div class="ia-col-right">
+           <div class="card">
+            <div class="row no-wrap justify-between" style="margin-bottom: 16px;">
+              <strong>Logs</strong>
+            </div>
+            <div id="logs" ref="logsEl">
+              <div
+                v-for="(log, index) in logs"
+                :key="index"
+                class="line"
+              >
+                <span class="ts">[{{ formatTime(log.ts) }}]</span>
+                <span>{{ log.msg }}</span>
               </div>
             </div>
           </div>
@@ -160,10 +158,6 @@ function upsertChat (payload = {}) {
   } else {
     chats.value.splice(idx, 1, updated);
   }
-}
-
-function cleanLogs(){
-  logs.value = []
 }
 
 function addLog (ts, msg) {
@@ -398,8 +392,8 @@ onBeforeUnmount(() => {
 .ia-root {
   --fg: #e8eef6;
   --muted: #99a7b6;
-  --card: rgba(255, 255, 255, .06);
-  --border: rgba(255, 255, 255, .08);
+  --card: #161717;
+  --border: rgba(199, 199, 199, 0.507);
   --ok: #7af59b;
   --bad: #ff7b7b;
   --accent: rgba(122, 245, 155, .18);
@@ -435,6 +429,7 @@ onBeforeUnmount(() => {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
+  box-shadow: 0 10px 10px rgba(0, 0, 0, 0.635);
   padding: 12px;
 }
 

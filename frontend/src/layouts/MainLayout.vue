@@ -2,25 +2,21 @@
   <q-layout view="hHh lpR fFf">
 
     <q-header elevated class="bg-glass text-white" height-hint="98">
-      <q-toolbar @click="goTo('/')" class="cursor-pointer">
-        <q-toolbar-title class="row items-center">
-          <q-icon name="mdi-whatsapp" size="lg" class="q-pr-sm" />
-          IanoWhatsapp
-        </q-toolbar-title>
-
-        <q-btn dense flat round icon="help" to="/help" />
-      </q-toolbar>
+      <div class="row no-wrap w100 justify-between q-px-sm">
+        <q-toolbar @click="goToDoc()" class="cursor-pointer">
+          <q-toolbar-title class="row items-center">
+            <q-img src="https://static.whatsapp.net/rsrc.php/v4/yP/r/rYZqPCBaG70.png" width="30px" class="q-mr-sm" />
+            IanoWhatsapp
+          </q-toolbar-title>
+        </q-toolbar>
+        <q-btn  flat  icon="mdi-wallet" to="/tokens" />
+      </div>
 
       <q-tabs align="center">
-        <q-route-tab to="/" exact label="Configurar"  icon="settings"/>
-
-        <q-route-tab
-          to="/iniciar"
-          label="Iniciar"
-          icon="play_circle"
-          @click="onClickIniciarTab"
-          :class="{ 'text-green-14': canStart }"
-        />
+        <q-route-tab to="/" exact label="Configurar" class="text-grey-4" icon="settings" />
+        <q-route-tab to="/iniciar" label="Iniciar"
+          :icon="!canStart ? 'mdi-robot-dead-outline' : 'mdi-robot-happy-outline'" @click="onClickIniciarTab"
+          :class="{ 'text-green-14  ': canStart }" />
       </q-tabs>
     </q-header>
 
@@ -46,11 +42,11 @@ const STORAGE_KEYS = {
 // controla se o tab "Iniciar" está habilitado (e verde)
 const canStart = ref(false)
 
-function goTo (path) {
-  router.push(path)
+function goToDoc() {
+  window.open('https://samuelvictorol.github.io/iano-whatsapp/', '_blank');
 }
 
-function hasRequiredConfig () {
+function hasRequiredConfig() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.openai)
     if (!raw) return false
@@ -66,7 +62,7 @@ function hasRequiredConfig () {
   }
 }
 
-function onClickIniciarTab (evt) {
+function onClickIniciarTab(evt) {
   // sempre recalcula antes
   canStart.value = hasRequiredConfig()
 

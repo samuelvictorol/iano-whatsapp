@@ -1,6 +1,6 @@
 <!-- ConfigurarPage.vue -->
 <template>
-  <q-page class="bg-dark q-pa-md">
+  <q-page class="bg-primary q-pa-md">
     <div class="settings-page">
 
       <!-- Header -->
@@ -21,11 +21,11 @@
                 <strong>Iniciar sessão</strong>.
               </span>
               <span v-else-if="hasPendingChanges">
-                ⚠️ Detectamos mudanças nas configurações. Clique em <strong>Aplicar mudanças</strong> para
-                reiniciar a sessão com o novo comportamento da IA.
+                🟡 Detectamos mudanças nas configurações. Clique em <strong>Aplicar mudanças</strong> para
+                reiniciar a sessão e escaneie o QR Code novamete.
               </span>
               <span v-else>
-                ✅ Sessão iniciada com essas configurações. Você pode ajustar os dados ou ir para o painel.
+                🟢 Sessão iniciada.
               </span>
             </div>
           </div>
@@ -33,9 +33,9 @@
           <div class="row items-center">
             <!-- Ações de importar/exportar JSON -->
             <div class="row items-center justify-start">
-              <q-btn dense outlined icon="download" color="teal" label="Download" class="q-mr-sm"
+              <q-btn dense outlined icon="download" color="accent" label="Download" class="q-mr-sm" glossy
                 @click="exportConfigToFile" />
-              <q-btn dense outlined icon="upload" color="teal" label="Importar" @click="triggerImport" />
+              <q-btn dense outlined icon="upload" color="blue" label="Importar" @click="triggerImport" glossy/>
               <input ref="fileInput" type="file" accept="application/json" class="hidden" @change="handleFileChange" />
             </div>
           </div>
@@ -58,7 +58,7 @@
           <!-- HEADER CUSTOM, sem ícone duplicado -->
           <template #header>
             <q-item-section avatar>
-              <q-avatar size="32px" :color="isOpenAIMongoComplete ? 'green' : 'teal-4'" text-color="grey-3">
+              <q-avatar size="32px" :color="isOpenAIMongoComplete ? 'green-14' : 'blue-14'" text-color="grey-3">
                 <q-icon name="vpn_key" />
               </q-avatar>
             </q-item-section>
@@ -73,7 +73,7 @@
             </q-item-section>
 
             <q-item-section side>
-              <q-chip v-if="isOpenAIMongoComplete" dense color="green" text-color="white" icon="check_circle">
+              <q-chip v-if="isOpenAIMongoComplete" dense color="green-14" text-color="white" icon="check_circle">
                 Pronto
               </q-chip>
               <q-chip v-else dense outline color="amber-5" text-color="amber-1" icon="priority_high">
@@ -86,7 +86,7 @@
             <q-form class="q-gutter-md" @submit="saveOpenAIConfig">
 
               <!-- OPENAI_API_KEY -->
-              <q-input class="bg-grey-2 rounded-borders" v-model="openaiApiKey" label="OPENAI_API_KEY" type="password"
+              <q-input class="bg-grey-2 rounded-borders" v-model="openaiApiKey" label="OPENAI API KEY" type="password"
                 outlined dense>
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -98,7 +98,7 @@
               </q-input>
 
               <!-- OPENAI_CHAT_MODEL (q-select) -->
-              <q-select v-model="openaiChatModel" label="OPENAI_CHAT_MODEL" outlined dense
+              <q-select v-model="openaiChatModel" label="OPENAI CHAT MODEL" outlined dense
                 class="bg-grey-2 rounded-borders" :options="openaiModelOptions" emit-value map-options>
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -111,7 +111,7 @@
 
               <!-- OPENAI_TEMPERATURE -->
               <q-input class="bg-grey-2 rounded-borders" v-model.number="openaiTemperature" type="number"
-                label="OPENAI_TEMPERATURE" outlined dense :min="0" :max="2" step="0.1">
+                label="OPENAI TEMPERATURE" outlined dense :min="0" :max="2" step="0.1">
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -123,7 +123,7 @@
 
               <!-- OPENAI_MAX_TOKENS -->
               <q-input class="bg-grey-2 rounded-borders" v-model.number="openaiMaxTokens" type="number"
-                label="OPENAI_MAX_TOKENS" outlined dense :min="1">
+                label="OPENAI MAX TOKENS" outlined dense :min="1">
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -134,7 +134,7 @@
               </q-input>
 
               <!-- TRANSCRIBE_MODEL (q-select) -->
-              <q-select v-model="openaiTranscribeModel" label="TRANSCRIBE_MODEL" outlined
+              <q-select v-model="openaiTranscribeModel" label="TRANSCRIBE MODEL" outlined
                 class="bg-grey-2 rounded-borders" dense :options="openaiTranscribeOptions" emit-value map-options>
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -146,13 +146,12 @@
               </q-select>
 
               <!-- MONGO_CONNECTION_STRING -->
-              <q-input class="bg-grey-2 rounded-borders" v-model="mongoConnectionString" label="MONGO_CONNECTION_STRING"
+              <q-input class="bg-grey-2 rounded-borders" v-model="mongoConnectionString" label="MONGO CONNECTION STRING"
                 outlined dense>
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
-                      String de conexão do MongoDB.
-                      Ex.: mongodb+srv://user:pass@cluster/dbname
+                      String de conexão do banco de dados Mongo.
                     </q-tooltip>
                   </q-icon>
                 </template>
@@ -160,7 +159,7 @@
 
               <div class="row justify-end q-gutter-sm q-mt-md">
                 <q-btn flat color="grey-2" icon="restore" label="Resetar" @click="resetOpenAIConfig" />
-                <q-btn class="bg-teal text-white" icon-right="save" label="Salvar" type="submit" />
+                <q-btn class="bg-positive text-white" icon-right="save" label="Salvar"  type="submit" />
               </div>
             </q-form>
           </q-card-section>
@@ -175,7 +174,7 @@
         ]" expand-icon="expand_more">
           <template #header>
             <q-item-section avatar>
-              <q-avatar size="32px" color="teal-4" text-color="grey-3">
+              <q-avatar size="32px" color="blue" text-color="grey-3">
                 <q-icon name="smart_toy" />
               </q-avatar>
             </q-item-section>
@@ -190,10 +189,10 @@
             </q-item-section>
 
             <q-item-section side>
-              <q-chip v-if="isAIConfigComplete" dense color="green" text-color="white" icon="check_circle">
+              <q-chip v-if="isAIConfigComplete" dense color="green-14" text-color="white" icon="check_circle">
                 Pronto
               </q-chip>
-              <q-chip v-else dense outline color="blue-grey-5" text-color="blue-grey-1" icon="settings_suggest">
+              <q-chip v-else dense outline color="grey" text-color="grey" icon="settings_suggest">
                 Opcional
               </q-chip>
             </q-item-section>
@@ -203,7 +202,7 @@
             <q-form class="q-gutter-md" @submit="saveAIConfig">
 
               <!-- BOT_NAME -->
-              <q-input class="bg-grey-2 rounded-borders" v-model="botName" label="BOT_NAME" outlined dense>
+              <q-input class="bg-grey-2 rounded-borders" v-model="botName" label="Nome do Bot" outlined dense>
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -215,7 +214,7 @@
 
               <!-- IA_CONTEXT_MAX_MINUTES -->
               <q-input class="bg-grey-2 rounded-borders" v-model.number="iaContextMinutes" type="number"
-                label="IA_CONTEXT_MAX_MINUTES" outlined dense :min="0">
+                label="Tempo de Consideração" outlined dense :min="0">
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -228,7 +227,7 @@
 
               <!-- HUMAN_HOLD_MS -->
               <q-input class="bg-grey-2 rounded-borders" v-model.number="humanHoldMs" type="number"
-                label="HUMAN_HOLD_MS (ms)" outlined dense :min="0">
+                label="Tempo Intervenção Humana (ms)" outlined dense :min="0">
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -278,7 +277,7 @@
 
               <div class="row justify-end q-gutter-sm q-mt-md">
                 <q-btn flat color="grey-2" icon="restore" label="Resetar" @click="resetAIConfig" />
-                <q-btn class="bg-teal text-white" icon-right="save" label="Salvar" type="submit" />
+                <q-btn class="bg-positive text-white" icon-right="save" label="Salvar" type="submit" />
               </div>
             </q-form>
           </q-card-section>
@@ -293,7 +292,7 @@
         ]" expand-icon="expand_more">
           <template #header>
             <q-item-section avatar>
-              <q-avatar size="32px" color="teal-4" text-color="grey-3">
+              <q-avatar size="32px" color="blue" text-color="grey-3">
                 <q-icon name="dataset" />
               </q-avatar>
             </q-item-section>
@@ -311,7 +310,7 @@
               <q-chip v-if="hasDataItems" dense color="green" text-color="white" icon="check_circle">
                 {{ dataItems.length }} item(s)
               </q-chip>
-              <q-chip v-else dense outline color="blue-grey-5" text-color="blue-grey-1" icon="info">
+              <q-chip v-else dense outline color="grey" text-color="grey" icon="info">
                 Opcional
               </q-chip>
             </q-item-section>
@@ -365,10 +364,10 @@
                 <!-- Imagens como array de inputs -->
                 <div class="col-12 col-md-6">
                   <div class="row items-center justify-between q-mb-xs">
-                    <q-btn dense class="q-mx-xs text-secondary bg-grey-2" icon="add_photo_alternate"
+                    <q-btn dense class="q-mx-xs text-secondary bg-blue text-white" icon="add_photo_alternate"
                       label="Adicionar imagem" @click="addImageInput" />
-                    <div class="text-caption text-grey-6">
-                      Imagens (uma URL por campo)
+                    <div class="text-caption text-grey-6 q-mr-sm">
+                      Imagens
                     </div>
                   </div>
 
@@ -432,7 +431,7 @@
 
               <div class="row justify-end q-gutter-sm q-mt-md">
                 <q-btn flat color="grey-2" icon="delete_sweep" label="Limpar itens" @click="clearDataItems" />
-                <q-btn class="bg-teal text-white" icon-right="save" label="Salvar" type="submit" />
+                <q-btn class="bg-positive text-white" icon-right="save" label="Salvar" type="submit" />
               </div>
             </q-form>
 
@@ -1066,9 +1065,9 @@ onMounted(() => {
 
 /* Glassmorphism nos cards */
 .section-card {
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(45, 212, 191, 0.2);
-  box-shadow: 0 10px 20px #020617a2;
+  background: #161717;
+  border: 1px solid rgba(233, 233, 233, 0.2);
+  box-shadow: 0 10px 10px rgba(0, 0, 0, 0.635);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
@@ -1114,4 +1113,6 @@ onMounted(() => {
 .hidden {
   display: none;
 }
+
 </style>
+

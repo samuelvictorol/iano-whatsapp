@@ -6,7 +6,7 @@
       <section class="hero q-mb-xl">
         <div class="text-center">
           <div class="text-overline text-accent q-mb-sm">
-            IANO WhatsApp • Agente para WhatsApp
+            IanoWhatsapp • Agente para WhatsApp
           </div>
           <div class="text-h4 text-weight-bold text-grey-2 q-mb-sm">
             Agente de IA para WhatsApp

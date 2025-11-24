@@ -2,7 +2,7 @@
   "name": "iano_whatsapp",
   "version": "0.0.1",
   "description": "A Quasar Project",
-  "productName": "IANO WhatsApp",
+  "productName": "IanoWhatsapp",
   "author": "samuelvictorol <samuel.softdev@outlook.com>",
   "type": "module",
   "private": true,
