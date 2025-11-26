@@ -18,6 +18,9 @@ const {
   hasRuntimeConfig
 } = require('./src/config/runtime-config');
 
+// 👇 NOVO: serviço que agrega uso de tokens da OpenAI
+const { getTokenUsageSummary } = require('./src/services/token-usage');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -25,8 +28,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = Number(process.env.PORT || 10000);
 const TOKEN = process.env.DASH_TOKEN || ''; // opcional
-const DB_NAME = process.env.MONGO_DB || 'iano_whatsapp';
-const COL_NAME = process.env.MONGO_COL || 'messages';
+const DB_NAME = 'iano_whatsapp';
+const COL_NAME = 'messages';
 const MSG_TTL_DAYS = Number(process.env.MSG_TTL_DAYS || 0);
 
 let mongoClient = null;
@@ -388,7 +391,7 @@ app.post('/send-text', async (req, res) => {
   }
 });
 
-// === NOVO: /start-session ===
+// === /start-session ===
 // Recebe mongoUri + config OpenAI/IA vindas do painel e inicializa tudo.
 app.post('/start-session', async (req, res) => {
   try {
@@ -473,6 +476,67 @@ app.post('/reset-session', async (req, res) => {
       .json({ ok: false, error: err?.message || 'internal error' });
   }
 });
+
+// === NOVO: /token-usage ===
+// Retorna dados agregados de tokens da OpenAI (somente API OpenAI, nada de Mongo DB usage)
+app.get('/token-usage', async (req, res) => {
+  try {
+    if (TOKEN && req.headers['x-token'] !== TOKEN) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
+
+    // Key da OpenAI vinda do frontend (localStorage)
+    const headerKey = req.headers['x-openai-key'] || '';
+    const queryKey  = req.query.openaiKey || '';
+    const frontendKey = String(headerKey || queryKey || '').trim();
+
+    // console.log('[token-usage] openaiKey query/header:', frontendKey ? '***recebida***' : '(vazia)');
+
+    const range = String(req.query.range || '7d'); // '7d' | '30d' | 'month'
+
+    // 👉 Se AINDA não existe runtimeConfig, não quebra: só devolve tudo zerado
+    if (!hasRuntimeConfig()) {
+      return res.json({
+        ok: true,
+        range,
+        daily: [],
+        summary: {
+          totalTokensThisRange: 0,
+          spentUsdThisRange: 0,
+          availableUsd: 0,
+          avgCostPer1kTokens: 0
+        }
+      });
+    }
+
+    // Daqui pra baixo só roda se a sessão já foi iniciada em /start-session
+    const cfg = getRuntimeConfig();
+    const configuredKey = cfg.openai?.apiKey;
+
+    // (Opcional) Travar se a key usada na sessão for diferente da enviada pelo front
+    if (configuredKey && frontendKey && configuredKey !== frontendKey) {
+      return res.status(401).json({
+        ok: false,
+        error: 'OPENAI_API_KEY divergente da sessão atual.'
+      });
+    }
+
+    const result = await getTokenUsageSummary({ range });
+
+    return res.json({
+      ok: true,
+      range,
+      daily: result.daily,
+      summary: result.summary
+    });
+  } catch (err) {
+    console.error('/token-usage error', err);
+    return res
+      .status(500)
+      .json({ ok: false, error: err?.message || 'internal error' });
+  }
+});
+
 
 // Integração com WhatsApp bus
 (async () => {

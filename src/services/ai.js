@@ -1,6 +1,8 @@
 // src/services/ai.js
 const { getRuntimeConfig, hasRuntimeConfig } = require('../config/runtime-config');
 const { getOpenAIClient } = require('./openai-client');
+// 👇 novo: serviço que grava uso de tokens no Mongo
+const { logTokenUsage } = require('./token-usage');
 
 const OPENAI_TIMEOUT_MS = 20000; // 20s
 
@@ -104,8 +106,7 @@ function buildSystemPrompt(cfg) {
   }
 
   return [
-    'Você é um agente de vendas SDR que atende clientes via WhatsApp.',
-    'Sempre responda em português brasileiro, com tom amigável, objetivo e profissional.',
+    `Você é um agente de vendas SDR que atende clientes via WhatsApp. As vezes o cliente pode enviar 2 mensagens seguidas, analise se realmente a segunda deverá ser respondida (pode ser uma correção de palavra do usuário ou um '?' que faltou na pergunta por exemplo), nesses casos não precisa de reply, retorne vazio. *Não fique saudando o cliente todo momento, apenas se a mensagem mais recente do cliente conter uma saudação, caso contrário seja objetivo.*`,
     ctx ? '\n[CONTEXTO / PAPEL]\n' + ctx : '',
     rules ? '\n[REGRAS ESPECÍFICAS]\n' + rules : '',
     metadata ? '\n[INFORMAÇÕES ADICIONAIS]\n' + metadata : '',
@@ -160,10 +161,27 @@ async function callAI({ chatId, text, context_messages }) {
 
   let resp;
   try {
+    // se der timeout, esse await lança erro e é tratado lá no server.js
     resp = await Promise.race([aiPromise, timeoutPromise]);
   } finally {
     clearTimeout(timeoutId);
-    aiPromise.catch(() => {}); // evita unhandled rejection
+    aiPromise.catch(() => {}); // evita unhandled rejection se a corrida já tiver resolvido
+  }
+
+  // 👇 LOG DE TOKENS DA OPENAI (se a resposta veio OK)
+  try {
+    const usage = resp?.usage;
+    if (usage) {
+      await logTokenUsage({
+        model,
+        promptTokens: usage.prompt_tokens || 0,
+        completionTokens: usage.completion_tokens || 0,
+        totalTokens: usage.total_tokens || 0,
+        chatId
+      });
+    }
+  } catch (e) {
+    console.error('[TOKEN_USAGE] falha ao logar uso:', e?.message || e);
   }
 
   const raw = resp?.choices?.[0]?.message?.content || '{}';
