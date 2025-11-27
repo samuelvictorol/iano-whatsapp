@@ -11,35 +11,17 @@
               <strong>QR Code</strong>
               <div class="row" style="gap: 8px;">
                 <!-- <span class="mono">{{ qrStatus }}</span> -->
-                <q-btn
-                  dense
-                  flat
-                  size="sm"
-                  icon="play_arrow"
-                  label="Iniciar sessão"
-                  :loading="startLoading"
-                  @click="startSessionFromStorage"
-                />
-                <q-btn
-                  dense
-                  flat
-                  size="sm"
-                  icon="refresh"
-                  label="Resetar sessão"
-                  :loading="resetLoading"
-                  @click="resetSession"
-                />
+                <q-btn dense flat size="sm" icon="play_arrow" label="Iniciar sessão" :loading="startLoading"
+                  @click="startSessionFromStorage" />
+                <q-btn dense flat size="sm" icon="refresh" label="Resetar sessão" :loading="resetLoading"
+                  @click="resetSession" />
               </div>
             </div>
             <div id="qr">
               <img v-if="qrImgSrc" :src="qrImgSrc" alt="QR" />
             </div>
-            <div
-              v-if="resetMessage"
-              class="mono"
-              style="margin-top: 8px; font-size: 11px; opacity: .8;"
-            >
-              {{ resetMessage }}
+            <div v-if="resetMessage" class="mono" style="margin-top: 8px; font-size: 11px; opacity: .8;">
+              <q-spinner-gears color="grey-4" size="2em" /> {{ resetMessage }}
             </div>
           </div>
           <div class="card">
@@ -47,16 +29,9 @@
               <strong>Chats</strong>
             </div>
             <div id="grid" class="grid">
-              <div
-                v-for="chat in chats"
-                :key="chat.chatId"
-                class="card"
-              >
+              <div v-for="chat in chats" :key="chat.chatId" class="card">
                 <div class="row">
-                  <div
-                    class="mono"
-                    :title="`${chat.title || chat.chatId} (${chat.chatId})`"
-                  >
+                  <div class="mono" :title="`${chat.title || chat.chatId} (${chat.chatId})`">
                     {{ chat.title || chat.chatId }}
                   </div>
                   <div :class="badgeClass(chat)">
@@ -76,16 +51,12 @@
 
         <!-- COL DIREITA: CHATS -->
         <div class="ia-col-right">
-           <div class="card">
+          <div class="card">
             <div class="row no-wrap justify-between" style="margin-bottom: 16px;">
               <strong>Logs</strong>
             </div>
             <div id="logs" ref="logsEl">
-              <div
-                v-for="(log, index) in logs"
-                :key="index"
-                class="line"
-              >
+              <div v-for="(log, index) in logs" :key="index" class="line">
                 <span class="ts">[{{ formatTime(log.ts) }}]</span>
                 <span>{{ log.msg }}</span>
               </div>
@@ -131,7 +102,7 @@ const chats = ref([]); // { chatId, title, aiInControl, holdUntil, remainingMs }
 let eventSource = null;
 let timerId = null;
 
-function upsertChat (payload = {}) {
+function upsertChat(payload = {}) {
   const { chatId } = payload;
   if (!chatId) return;
 
@@ -160,7 +131,7 @@ function upsertChat (payload = {}) {
   }
 }
 
-function addLog (ts, msg) {
+function addLog(ts, msg) {
   const tsVal = ts || Date.now();
   logs.value.push({
     ts: tsVal,
@@ -168,7 +139,7 @@ function addLog (ts, msg) {
   });
 }
 
-function formatEta (ms) {
+function formatEta(ms) {
   if (!ms || ms <= 0) return '00:00';
   const totalSeconds = Math.floor(ms / 1000);
   const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
@@ -176,25 +147,25 @@ function formatEta (ms) {
   return `${mm}:${ss}`;
 }
 
-function formatTime (ts) {
+function formatTime(ts) {
   const dt = new Date(ts);
   return dt.toLocaleTimeString();
 }
 
-function isAiOn (chat) {
+function isAiOn(chat) {
   return (chat.remainingMs ?? 0) <= 0 || !!chat.aiInControl;
 }
 
-function badgeClass (chat) {
+function badgeClass(chat) {
   return 'badge ' + (isAiOn(chat) ? 'on' : 'off');
 }
 
-function badgeLabel (chat) {
+function badgeLabel(chat) {
   return isAiOn(chat) ? 'IA ON' : 'IA OFF';
 }
 
 // Resetar sessão (apaga data/wwebjs + data/media no backend)
-async function resetSession () {
+async function resetSession() {
   try {
     resetLoading.value = true;
     resetMessage.value = '';
@@ -206,7 +177,7 @@ async function resetSession () {
       throw new Error(data?.error || 'Erro ao resetar sessão.');
     }
 
-    resetMessage.value = 'Sessão reiniciada. Aguarde aparecer um novo QR Code.';
+    resetMessage.value = 'Sessão reiniciada. Scaneie o QR Code.';
     qrStatus.value = 'aguardando novo QR...';
   } catch (err) {
     console.error('Erro ao resetar sessão', err);
@@ -218,7 +189,7 @@ async function resetSession () {
 }
 
 // Iniciar sessão usando configs salvas no localStorage (mesmo formato do /start-session do backend)
-async function startSessionFromStorage () {
+async function startSessionFromStorage() {
   try {
     startLoading.value = true;
 
@@ -389,6 +360,7 @@ onBeforeUnmount(() => {
 .ia-page {
   padding: 0;
 }
+
 .ia-root {
   --fg: #e8eef6;
   --muted: #99a7b6;
@@ -404,7 +376,9 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
 }
 
-.ia-root *,.ia-root *::before,.ia-root *::after {
+.ia-root *,
+.ia-root *::before,
+.ia-root *::after {
   box-sizing: border-box;
 }
 
@@ -470,7 +444,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 65%;
+  max-width: 99%;
 }
 
 .grid {
@@ -521,6 +495,7 @@ onBeforeUnmount(() => {
   .ia-main {
     grid-template-columns: 1fr;
   }
+
   .ia-col-left {
     width: 100%;
   }

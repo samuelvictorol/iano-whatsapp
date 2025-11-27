@@ -5,7 +5,8 @@ const routes = [
     children: [
       { path: '/', component: () => import('pages/ConfigurarPage.vue') },
       { path: '/iniciar', component: () => import('src/pages/IniciarPage.vue') },
-      { path: '/tokens', component: () => import('src/pages/TokensPage.vue') }
+      { path: '/tokens', component: () => import('src/pages/TokensPage.vue') },
+      { path: '/disparar', component: () => import('src/pages/DispararPage.vue') },
     ]
   },
 

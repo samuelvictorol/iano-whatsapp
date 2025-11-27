@@ -9,7 +9,8 @@
             IanoWhatsapp
           </q-toolbar-title>
         </q-toolbar>
-        <q-btn  flat  icon="mdi-wallet" to="/tokens" />
+        <q-btn flat icon="message" to="/disparar" />
+        <q-btn flat icon="mdi-wallet" to="/tokens" />
       </div>
 
       <q-tabs align="center">
@@ -71,9 +72,11 @@ function onClickIniciarTab(evt) {
     evt?.stopPropagation?.()
 
     $q.notify({
-      type: 'warning',
+      textColor: 'black',
+      color: 'amber',
+      icon: 'settings',
       position: 'top',
-      message: 'Antes de iniciar, configure OPENAI_API_KEY e MONGO_CONNECTION_STRING na aba Configurar.'
+      message: 'Antes de iniciar, Configure sua OPENAI API KEY e MONGO CONNECTION STRING na aba Configurar.'
     })
 
     router.push('/')

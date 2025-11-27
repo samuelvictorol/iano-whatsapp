@@ -4,7 +4,7 @@ body {
     font-family: "Montserrat", sans-serif;
     font-optical-sizing: auto;
     font-style: normal;
-    background: #0A0F13;
+    background: #161717;
 }
 
 .w100 {
@@ -14,4 +14,12 @@ body {
 .bg-glass{
     background-color: #0a0f13c5 !important;
     backdrop-filter: blur(10px);
+}
+
+.q-card {
+  background: #161717;
+  border: 1px solid rgba(233, 233, 233, 0.2);
+  box-shadow: 0 10px 10px rgba(0, 0, 0, 0.635);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }

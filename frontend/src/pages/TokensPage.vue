@@ -1,6 +1,6 @@
 <template>
   <q-page class="bg-primary q-pa-md">
-    <div class="wallet-page">
+    <div class="">
 
       <!-- Loading geral -->
       <q-inner-loading :showing="loading">
@@ -23,10 +23,10 @@
       <div class="q-mb-lg">
         <div class="row items-center justify-between q-gutter-sm q-pt-md">
           <div>
-            <div class="text-h4 text-grey-2 q-mb-xs">
+            <div class="text-h5 text-weight-bold text-white q-mb-xs">
               Wallet de Tokens
             </div>
-            <div class="text-caption text-grey-4">
+            <div class="text-grey-4">
               Acompanhe o consumo de tokens da sua OpenAI API KEY e o custo aproximado em dólar e real.
             </div>
 
@@ -59,7 +59,7 @@
             </div>
           </div>
 
-          <div class="column items-end">
+          <div class="column" :class="isMobile ? 'items-start' : 'items-end'">
             <div class="text-caption text-grey-5">
               Última atualização
             </div>
@@ -77,7 +77,7 @@
                 toggle-color="teal-4"
                 color="grey-9"
                 text-color="grey-1"
-                size="sm"
+                size="md"
                 @update:model-value="onChangeRange"
               />
             </div>
@@ -132,14 +132,14 @@
                 <div class="text-caption text-grey-3">
                   Tokens no período
                 </div>
-                <div class="text-h5 text-teal-2">
+                <div class="text-h5 text-green-3">
                   {{ formatNumber(summary.totalTokensThisRange) }} tok
                 </div>
                 <div class="text-caption text-grey-4 q-mt-xs">
                   Soma de todos os tokens (prompt + completion) no intervalo.
                 </div>
               </div>
-              <q-icon name="token" size="32px" class="text-teal-2" />
+              <q-icon name="token" size="32px" class="text-green-3" />
             </q-card-section>
           </q-card>
         </div>
@@ -311,7 +311,7 @@ import { api } from 'boot/axios';
 
 const $q = useQuasar();
 const router = useRouter();
-
+const isMobile = $q.screen.lt.md
 const STORAGE_KEYS = {
   openai: 'config_openai'
 };
@@ -400,12 +400,13 @@ onBeforeMount(async () => {
 
 function notifyAndRedirect () {
   $q.notify({
-    type: 'warning',
+    color: 'amber',
+    textColor: 'black',
+    icon: 'settings',
     position: 'top',
-    icon: 'warning',
-    message: 'Configure sua OPENAI API KEY na aba Configurar antes de acessar a Wallet de tokens.'
+    message: 'Configure as credenciais obrigatórias antes de acessar a Wallet de Tokens.'
   });
-  router.push('/configurar'); // ajusta se sua rota de config tiver outro nome
+  router.push('/');
 }
 
 async function fetchTokenUsage () {
@@ -577,9 +578,9 @@ function formatShortDate (isoDate) {
 
 const lastUpdatedLabel = computed(() => {
   const last = dailyUsage.value[dailyUsage.value.length - 1];
-  if (!last) return 'Sem dados ainda';
+  if (!last) return '-';
   const d = new Date(last.date);
-  if (Number.isNaN(d.getTime())) return 'Sem dados ainda';
+  if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit'
@@ -590,20 +591,10 @@ const hasRealData = computed(() => dailyUsage.value.length > 0);
 </script>
 
 <style scoped>
-.wallet-page {
+.q-page {
   max-width: 1100px;
   margin: 0 auto;
   position: relative;
-}
-
-/* Cards com glassmorphism escuro */
-.section-card {
-  background: #161717;
-  border: 1px solid rgba(233, 233, 233, 0.2);
-  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-radius: 18px;
 }
 
 .summary-card {
@@ -630,7 +621,7 @@ const hasRealData = computed(() => dailyUsage.value.length > 0);
 
 /* Tabela */
 .wallet-table :deep(thead tr) {
-  background: #0A0F13;
+  background: teal;
 }
 
 .wallet-table :deep(th) {

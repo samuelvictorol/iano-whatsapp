@@ -8,16 +8,16 @@
         <div class="row items-center justify-between q-gutter-sm q-pt-md">
 
           <div class="">
-            <div class="text-h4 text-grey-3 q-mb-xs">
+            <div class="text-h5 text-weight-bold text-white q-mb-xs">
               Configurações
             </div>
             <!-- <div class="text-subtitle2 text-grey-7">
               Ajuste as chaves da OpenAI, conexão com banco, regras da IA e os dados que ela vai usar.
             </div> -->
 
-            <div class=" text-grey q-mt-sm">
+            <div class=" text-grey q-my-sm">
               <span v-if="!sessionStartedOnce">
-                ❓ Preencha as configurações obrigatórias de <strong>OpenAI & Mongo</strong> e depois clique em
+                Preencha as configurações obrigatórias de <strong>OpenAI & Mongo</strong> e depois clique em
                 <strong>Iniciar sessão</strong>.
               </span>
               <span v-else-if="hasPendingChanges">
@@ -33,9 +33,9 @@
           <div class="row items-center">
             <!-- Ações de importar/exportar JSON -->
             <div class="row items-center justify-start">
-              <q-btn dense outlined icon="download" color="accent" label="Download" class="q-mr-sm" glossy
+              <q-btn dense outlined icon="upload" label="Exportar" class="q-mr-sm text-primary bg-white text-bold"  glossy
                 @click="exportConfigToFile" />
-              <q-btn dense outlined icon="upload" color="blue" label="Importar" @click="triggerImport" glossy/>
+              <q-btn dense outlined  icon="download" class="text-primary bg-white text-bold" glossy label="Importar" @click="triggerImport"/>
               <input ref="fileInput" type="file" accept="application/json" class="hidden" @change="handleFileChange" />
             </div>
           </div>
@@ -50,7 +50,7 @@
       </div>
 
       <!-- CARD: API -->
-      <q-card class="q-mb-md shadow-2 section-card">
+      <q-card class="q-mb-md shadow section-card">
         <q-expansion-item v-model="apiExpanded" dense-toggle expand-separator :header-class="[
           'expansion-header',
           isOpenAIMongoComplete ? 'expansion-header--ok' : 'expansion-header--warn'
@@ -58,13 +58,13 @@
           <!-- HEADER CUSTOM, sem ícone duplicado -->
           <template #header>
             <q-item-section avatar>
-              <q-avatar size="32px" :color="isOpenAIMongoComplete ? 'green-14' : 'blue-14'" text-color="grey-3">
+              <q-avatar size="32px" :color="isOpenAIMongoComplete ? 'green-14' : 'amber'" text-color="black">
                 <q-icon name="vpn_key" />
               </q-avatar>
             </q-item-section>
 
             <q-item-section>
-              <div class="text-body1 text-grey-2">
+              <div class="text-body1 text-white">
                 Configurar OpenAI & Mongo
               </div>
               <div v-if="apiExpanded" class="text-caption text-grey-6">
@@ -86,7 +86,7 @@
             <q-form class="q-gutter-md" @submit="saveOpenAIConfig">
 
               <!-- OPENAI_API_KEY -->
-              <q-input class="bg-grey-2 rounded-borders" v-model="openaiApiKey" label="OPENAI API KEY" type="password"
+              <q-input class="bg-grey rounded-borders" v-model="openaiApiKey" label="OPENAI API KEY" type="password"
                 outlined dense>
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -99,7 +99,7 @@
 
               <!-- OPENAI_CHAT_MODEL (q-select) -->
               <q-select v-model="openaiChatModel" label="OPENAI CHAT MODEL" outlined dense
-                class="bg-grey-2 rounded-borders" :options="openaiModelOptions" emit-value map-options>
+                class="bg-grey rounded-borders" :options="openaiModelOptions" emit-value map-options>
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -110,7 +110,7 @@
               </q-select>
 
               <!-- OPENAI_TEMPERATURE -->
-              <q-input class="bg-grey-2 rounded-borders" v-model.number="openaiTemperature" type="number"
+              <q-input class="bg-grey rounded-borders" v-model.number="openaiTemperature" type="number"
                 label="OPENAI TEMPERATURE" outlined dense :min="0" :max="2" step="0.1">
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -122,7 +122,7 @@
               </q-input>
 
               <!-- OPENAI_MAX_TOKENS -->
-              <q-input class="bg-grey-2 rounded-borders" v-model.number="openaiMaxTokens" type="number"
+              <q-input class="bg-grey rounded-borders" v-model.number="openaiMaxTokens" type="number"
                 label="OPENAI MAX TOKENS" outlined dense :min="1">
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -135,7 +135,7 @@
 
               <!-- TRANSCRIBE_MODEL (q-select) -->
               <q-select v-model="openaiTranscribeModel" label="TRANSCRIBE MODEL" outlined
-                class="bg-grey-2 rounded-borders" dense :options="openaiTranscribeOptions" emit-value map-options>
+                class="bg-grey rounded-borders" dense :options="openaiTranscribeOptions" emit-value map-options>
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -146,7 +146,7 @@
               </q-select>
 
               <!-- MONGO_CONNECTION_STRING -->
-              <q-input class="bg-grey-2 rounded-borders" v-model="mongoConnectionString" label="MONGO CONNECTION STRING"
+              <q-input class="bg-grey rounded-borders" v-model="mongoConnectionString" label="MONGO CONNECTION STRING"
                 outlined dense>
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -158,7 +158,7 @@
               </q-input>
 
               <div class="row justify-end q-gutter-sm q-mt-md">
-                <q-btn flat color="grey-2" icon="restore" label="Resetar" @click="resetOpenAIConfig" />
+                <q-btn flat color="grey" icon="restore" label="Resetar" @click="resetOpenAIConfig" />
                 <q-btn class="bg-positive text-white" icon-right="save" label="Salvar"  type="submit" />
               </div>
             </q-form>
@@ -167,20 +167,20 @@
       </q-card>
 
       <!-- CARD: Configurações da IA -->
-      <q-card class="q-mb-md shadow-2 section-card">
+      <q-card class="q-mb-md shadow section-card">
         <q-expansion-item v-model="aiExpanded" dense-toggle expand-separator :header-class="[
           'expansion-header',
           isAIConfigComplete ? 'expansion-header--ok' : 'expansion-header--neutral'
         ]" expand-icon="expand_more">
           <template #header>
             <q-item-section avatar>
-              <q-avatar size="32px" color="blue" text-color="grey-3">
+              <q-avatar size="32px" color="green-14" text-color="primary">
                 <q-icon name="smart_toy" />
               </q-avatar>
             </q-item-section>
 
             <q-item-section>
-              <div class="text-body1 text-grey-2">
+              <div class="text-body1 text-white">
                 Configurações da IA
               </div>
               <div v-if="aiExpanded" class="text-caption text-grey-6">
@@ -202,7 +202,7 @@
             <q-form class="q-gutter-md" @submit="saveAIConfig">
 
               <!-- BOT_NAME -->
-              <q-input class="bg-grey-2 rounded-borders" v-model="botName" label="Nome do Bot" outlined dense>
+              <q-input class="bg-grey rounded-borders" v-model="botName" label="Nome do Bot" outlined dense>
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -213,7 +213,7 @@
               </q-input>
 
               <!-- IA_CONTEXT_MAX_MINUTES -->
-              <q-input class="bg-grey-2 rounded-borders" v-model.number="iaContextMinutes" type="number"
+              <q-input class="bg-grey rounded-borders" v-model.number="iaContextMinutes" type="number"
                 label="Tempo de Consideração" outlined dense :min="0">
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -226,7 +226,7 @@
               </q-input>
 
               <!-- HUMAN_HOLD_MS -->
-              <q-input class="bg-grey-2 rounded-borders" v-model.number="humanHoldMs" type="number"
+              <q-input class="bg-grey rounded-borders" v-model.number="humanHoldMs" type="number"
                 label="Tempo Intervenção Humana (ms)" outlined dense :min="0">
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -239,7 +239,7 @@
               </q-input>
 
               <!-- Contexto da IA -->
-              <q-input class="bg-grey-2 rounded-borders" v-model="aiContext" type="textarea" autogrow outlined
+              <q-input class="bg-grey rounded-borders" v-model="aiContext" type="textarea" autogrow outlined
                 label="Contexto da IA (papel / persona)">
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -251,7 +251,7 @@
               </q-input>
 
               <!-- Regras da IA -->
-              <q-input class="bg-grey-2 rounded-borders" v-model="aiRules" type="textarea" autogrow outlined
+              <q-input class="bg-grey rounded-borders" v-model="aiRules" type="textarea" autogrow outlined
                 label="Regras da IA (prompt / instruções)">
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -263,7 +263,7 @@
               </q-input>
 
               <!-- Metadata -->
-              <q-input class="bg-grey-2 rounded-borders" v-model="aiMetadata" type="textarea" autogrow outlined
+              <q-input class="bg-grey rounded-borders" v-model="aiMetadata" type="textarea" autogrow outlined
                 label="Metadata (observações extras para o prompt)">
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
@@ -276,7 +276,7 @@
               </q-input>
 
               <div class="row justify-end q-gutter-sm q-mt-md">
-                <q-btn flat color="grey-2" icon="restore" label="Resetar" @click="resetAIConfig" />
+                <q-btn flat color="grey" icon="restore" label="Resetar" @click="resetAIConfig" />
                 <q-btn class="bg-positive text-white" icon-right="save" label="Salvar" type="submit" />
               </div>
             </q-form>
@@ -285,20 +285,20 @@
       </q-card>
 
       <!-- CARD: Dados para a IA (catálogo etc.) -->
-      <q-card class="q-mb-md shadow-2 section-card">
+      <q-card class="q-mb-md shadow section-card">
         <q-expansion-item v-model="dataExpanded" dense-toggle expand-separator :header-class="[
           'expansion-header',
           hasDataItems ? 'expansion-header--ok' : 'expansion-header--neutral'
         ]" expand-icon="expand_more">
           <template #header>
             <q-item-section avatar>
-              <q-avatar size="32px" color="blue" text-color="grey-3">
+              <q-avatar size="32px" color="green-14" text-color="primary">
                 <q-icon name="dataset" />
               </q-avatar>
             </q-item-section>
 
             <q-item-section>
-              <div class="text-body1 text-grey-2">
+              <div class="text-body1 text-white">
                 Produtos e Serviços
               </div>
               <div v-if="dataExpanded" class="text-caption text-grey-6">
@@ -322,7 +322,7 @@
               <div class="row q-col-gutter-sm">
                 <div class="col-12 col-md-6">
                   <!-- Título -->
-                  <q-input class="bg-grey-2 rounded-borders" v-model="newItem.title" label="Título" outlined dense>
+                  <q-input class="bg-grey rounded-borders" v-model="newItem.title" label="Título" outlined dense>
                     <template #append>
                       <q-icon name="help_outline" class="cursor-pointer">
                         <q-tooltip>
@@ -335,7 +335,7 @@
 
                 <div class="col-12 col-md-6">
                   <!-- Categoria -->
-                  <q-input class="bg-grey-2 rounded-borders" v-model="newItem.category" label="Categoria" outlined
+                  <q-input class="bg-grey rounded-borders" v-model="newItem.category" label="Categoria" outlined
                     dense>
                     <template #append>
                       <q-icon name="help_outline" class="cursor-pointer">
@@ -349,7 +349,7 @@
 
                 <div class="col-12">
                   <!-- Descrição -->
-                  <q-input class="bg-grey-2 rounded-borders" v-model="newItem.description" type="textarea" autogrow
+                  <q-input class="bg-grey rounded-borders" v-model="newItem.description" type="textarea" autogrow
                     label="Descrição" outlined>
                     <template #append>
                       <q-icon name="help_outline" class="cursor-pointer">
@@ -373,7 +373,7 @@
 
                   <div v-for="(img, idx) in newItem.images" :key="idx" class="row items-center q-mb-xs no-wrap">
                     <div class="col">
-                      <q-input class="bg-grey-2 rounded-borders" v-model="newItem.images[idx]"
+                      <q-input class="bg-grey rounded-borders" v-model="newItem.images[idx]"
                         :label="`Imagem ${idx + 1} (URL)`" outlined dense>
                         <template #append>
                           <q-icon name="help_outline" class="cursor-pointer">
@@ -402,7 +402,7 @@
 
                 <div class="col-6 col-md-3">
                   <!-- Preço -->
-                  <q-input class="bg-grey-2 rounded-borders" v-model.number="newItem.price" type="number" outlined dense
+                  <q-input class="bg-grey rounded-borders" v-model.number="newItem.price" type="number" outlined dense
                     label="Preço (R$)" min="0" step="0.01">
                     <template #append>
                       <q-icon name="help_outline" class="cursor-pointer">
@@ -416,7 +416,7 @@
 
                 <div class="col-6 col-md-3">
                   <!-- Preço promocional -->
-                  <q-input class="bg-grey-2 rounded-borders" v-model.number="newItem.promoPrice" type="number" outlined
+                  <q-input class="bg-grey rounded-borders" v-model.number="newItem.promoPrice" type="number" outlined
                     dense label="Preço promocional (R$)" min="0" step="0.01">
                     <template #append>
                       <q-icon name="help_outline" class="cursor-pointer">
@@ -430,7 +430,7 @@
               </div>
 
               <div class="row justify-end q-gutter-sm q-mt-md">
-                <q-btn flat color="grey-2" icon="delete_sweep" label="Limpar itens" @click="clearDataItems" />
+                <q-btn flat color="grey" icon="delete_sweep" label="Limpar itens" @click="clearDataItems" />
                 <q-btn class="bg-positive text-white" icon-right="save" label="Salvar" type="submit" />
               </div>
             </q-form>
@@ -1064,13 +1064,7 @@ onMounted(() => {
 }
 
 /* Glassmorphism nos cards */
-.section-card {
-  background: #161717;
-  border: 1px solid rgba(233, 233, 233, 0.2);
-  box-shadow: 0 10px 10px rgba(0, 0, 0, 0.635);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
+
 
 /* Header do expansion com card glass esverdeado */
 .expansion-header {
