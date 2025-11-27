@@ -1,12 +1,15 @@
 // src/services/ai.js
+const fs = require('fs');
+const path = require('path');
+
 const { getRuntimeConfig, hasRuntimeConfig } = require('../config/runtime-config');
 const { getOpenAIClient } = require('./openai-client');
-// 👇 novo: serviço que grava uso de tokens no Mongo
+// grava uso de tokens (texto + visão) no Mongo
 const { logTokenUsage } = require('./token-usage');
 
 const OPENAI_TIMEOUT_MS = 20000; // 20s
 
-function buildJsonSchema() {
+function buildJsonSchema () {
   return {
     name: 'sdr_response',
     schema: {
@@ -27,11 +30,11 @@ function buildJsonSchema() {
   };
 }
 
-function escapeRegExp(s) {
+function escapeRegExp (s) {
   return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function getBotName() {
+function getBotName () {
   try {
     const cfg = getRuntimeConfig();
     const name = cfg.ai && cfg.ai.BOT_NAME;
@@ -41,7 +44,7 @@ function getBotName() {
   }
 }
 
-function buildBotRegex(botName) {
+function buildBotRegex (botName) {
   const BASE_BOT = String(botName || '').replace(/\s*Bot\b/i, '').trim();
   return new RegExp(
     '^\\s*(\\*|_)?\\[?(?:' +
@@ -56,7 +59,7 @@ function buildBotRegex(botName) {
 let cachedBotName = null;
 let cachedBotRegex = null;
 
-function getBotRegex() {
+function getBotRegex () {
   const name = getBotName();
   if (!cachedBotRegex || cachedBotName !== name) {
     cachedBotName = name;
@@ -65,17 +68,20 @@ function getBotRegex() {
   return cachedBotRegex;
 }
 
-function isBotText(text = '') {
+function isBotText (text = '') {
   return getBotRegex().test(String(text));
 }
 
-function botPrefix(line) {
+function botPrefix (line) {
   const t = String(line || '');
   if (isBotText(t)) return t;
   return `*${getBotName()}:* ${t}`;
 }
 
-function buildSystemPrompt(cfg) {
+/**
+ * Prompt para TEXTO (SDR / vendas), usando configs do painel
+ */
+function buildSystemPrompt (cfg) {
   const ctx = cfg.ai?.AI_CONTEXT || '';
   const rules = cfg.ai?.AI_RULES || '';
   const metadata = cfg.ai?.AI_METADATA || '';
@@ -106,7 +112,9 @@ function buildSystemPrompt(cfg) {
   }
 
   return [
-    `Você é um agente de vendas SDR que atende clientes via WhatsApp. As vezes o cliente pode enviar 2 mensagens seguidas, analise se realmente a segunda deverá ser respondida (pode ser uma correção de palavra do usuário ou um '?' que faltou na pergunta por exemplo), nesses casos não precisa de reply, retorne vazio. *Não fique saudando o cliente todo momento, apenas se a mensagem mais recente do cliente conter uma saudação, caso contrário seja objetivo.*`,
+    'Você é um agente de vendas SDR que atende clientes via WhatsApp.',
+    'Às vezes o cliente pode enviar 2 mensagens seguidas; analise se a segunda realmente exige resposta (pode ser só correção de palavra ou um "?" esquecido). Nesses casos, você pode responder apenas a última mensagem relevante.',
+    'Não fique saudando o cliente o tempo todo. Cumprimente novamente apenas se a mensagem mais recente contiver uma saudação. Caso contrário, seja objetivo.',
     ctx ? '\n[CONTEXTO / PAPEL]\n' + ctx : '',
     rules ? '\n[REGRAS ESPECÍFICAS]\n' + rules : '',
     metadata ? '\n[INFORMAÇÕES ADICIONAIS]\n' + metadata : '',
@@ -117,7 +125,64 @@ function buildSystemPrompt(cfg) {
     .trim();
 }
 
-async function callAI({ chatId, text, context_messages }) {
+/**
+ * Prompt para VISÃO (interpretação de imagem), também usando configs do painel.
+ * Usa campos específicos se existirem (AI_VISION_CONTEXT / AI_VISION_RULES / AI_VISION_METADATA),
+ * senão cai no AI_CONTEXT / AI_RULES / AI_METADATA padrão.
+ */
+function buildVisionPrompt (cfg, userInstruction) {
+  const ctxVision =
+    cfg.ai?.AI_VISION_CONTEXT ||
+    cfg.ai?.AI_CONTEXT ||
+    '';
+
+  const rulesVision =
+    cfg.ai?.AI_VISION_RULES ||
+    cfg.ai?.AI_RULES ||
+    '';
+
+  const metadataVision =
+    cfg.ai?.AI_VISION_METADATA ||
+    cfg.ai?.AI_METADATA ||
+    '';
+
+  const instr = (userInstruction || '').trim() ||
+    'Descreva claramente o que aparece na imagem para ajudar o atendimento via WhatsApp.';
+
+  const lines = [
+    'Você é uma IA que interpreta IMAGENS recebidas via WhatsApp.',
+    'Responda SEMPRE em português brasileiro, em texto corrido (sem JSON).'
+  ];
+
+  if (ctxVision) {
+    lines.push('\n[CONTEXTO / PAPEL DA IA]\n' + ctxVision);
+  }
+  if (rulesVision) {
+    lines.push('\n[REGRAS ESPECÍFICAS PARA A VISÃO]\n' + rulesVision);
+  }
+  if (metadataVision) {
+    lines.push('\n[METADADOS / NEGÓCIO]\n' + metadataVision);
+  }
+
+  lines.push(
+    '\n[INSTRUÇÃO DO USUÁRIO SOBRE A IMAGEM]\n' + instr
+  );
+
+  lines.push(
+    '\n[ORIENTAÇÕES GERAIS]\n' +
+    '- Descreva pessoas, objetos, cenário, cores, emoções aparentes e detalhes relevantes.\n' +
+    '- Se houver texto legível na imagem, resuma o conteúdo principal com clareza.\n' +
+    '- Se parecer conteúdo sensível, descreva de forma respeitosa e sem detalhes gráficos.\n' +
+    '- Seja objetivo, mas sem ser frio; fale como um atendente humano prestando suporte.'
+  );
+
+  return lines.join('\n').trim();
+}
+
+/**
+ * IA de TEXTO (chat SDR)
+ */
+async function callAI ({ chatId, text, context_messages }) {
   if (!hasRuntimeConfig()) {
     throw new Error('Configuração da IA não inicializada. Inicie a sessão pelo painel.');
   }
@@ -161,14 +226,13 @@ async function callAI({ chatId, text, context_messages }) {
 
   let resp;
   try {
-    // se der timeout, esse await lança erro e é tratado lá no server.js
     resp = await Promise.race([aiPromise, timeoutPromise]);
   } finally {
     clearTimeout(timeoutId);
     aiPromise.catch(() => {}); // evita unhandled rejection se a corrida já tiver resolvido
   }
 
-  // 👇 LOG DE TOKENS DA OPENAI (se a resposta veio OK)
+  // Log de tokens (texto)
   try {
     const usage = resp?.usage;
     if (usage) {
@@ -181,7 +245,7 @@ async function callAI({ chatId, text, context_messages }) {
       });
     }
   } catch (e) {
-    console.error('[TOKEN_USAGE] falha ao logar uso:', e?.message || e);
+    console.error('[TOKEN_USAGE] falha ao logar uso (texto):', e?.message || e);
   }
 
   const raw = resp?.choices?.[0]?.message?.content || '{}';
@@ -206,8 +270,83 @@ async function callAI({ chatId, text, context_messages }) {
   return parsed;
 }
 
+/**
+ * IA de VISÃO (interpretação de imagem)
+ * payload: { chatId, filePath, mimeType, userText }
+ */
+async function describeImage ({ chatId, filePath, mimeType, userText }) {
+  if (!hasRuntimeConfig()) {
+    throw new Error('Configuração da IA não inicializada. Inicie a sessão pelo painel.');
+  }
+
+  const cfg = getRuntimeConfig();
+  const openai = getOpenAIClient();
+
+  const model = cfg.openai?.model || 'gpt-4.1-mini'; // precisa ser modelo com visão (gpt-4.1, 4.1-mini, 4o, etc.)
+  const temperature = Number(
+    cfg.openai?.temperature !== undefined ? cfg.openai.temperature : 0.7
+  );
+  const maxTokensCfg = Number(
+    cfg.openai?.maxTokens !== undefined ? cfg.openai.maxTokens : 400
+  );
+  const maxTokens = Math.max(200, Math.min(maxTokensCfg, 800)); // limite mais baixo pra visão
+
+  const systemPrompt = buildVisionPrompt(cfg, userText);
+
+  const absPath = path.resolve(filePath);
+  const buffer = await fs.promises.readFile(absPath);
+  const b64 = buffer.toString('base64');
+  const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${b64}`;
+
+  const resp = await openai.chat.completions.create({
+    model,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: userText && userText.trim()
+              ? userText.trim()
+              : 'Descreva em detalhes o que você vê nesta imagem considerando o contexto de atendimento via WhatsApp.'
+          },
+          {
+            type: 'image_url',
+            image_url: { url: dataUrl }
+          }
+        ]
+      }
+    ],
+    temperature,
+    max_tokens: maxTokens
+  });
+
+  // Log de tokens (visão)
+  try {
+    const usage = resp?.usage;
+    if (usage) {
+      await logTokenUsage({
+        model,
+        promptTokens: usage.prompt_tokens || 0,
+        completionTokens: usage.completion_tokens || 0,
+        totalTokens: usage.total_tokens || 0,
+        chatId
+      });
+    }
+  } catch (e) {
+    console.error('[TOKEN_USAGE] falha ao logar uso (visão):', e?.message || e);
+  }
+
+  const content = resp?.choices?.[0]?.message?.content?.trim() ||
+    'Não consegui analisar a imagem. Pode tentar enviar novamente?';
+
+  return content;
+}
+
 module.exports = {
   callAI,
   botPrefix,
-  isBotText
+  isBotText,
+  describeImage
 };

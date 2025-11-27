@@ -15,22 +15,28 @@ let runtimeConfig = null;
  *     AI_RULES,
  *     AI_METADATA,
  *     BOT_NAME,
- *     dataItems: [...]
+ *     dataItems: [...],
+ *
+ *     // opcionais para VISÃO (interpretação de imagens)
+ *     AI_VISION_CONTEXT,
+ *     AI_VISION_RULES,
+ *     AI_VISION_METADATA,
+ *     AI_VISION_MODE
  *   }
  * }
  */
-function setRuntimeConfig(cfg) {
+function setRuntimeConfig (cfg) {
   runtimeConfig = cfg || null;
 }
 
-function getRuntimeConfig() {
+function getRuntimeConfig () {
   if (!runtimeConfig) {
     throw new Error('RUNTIME_CONFIG_NOT_SET');
   }
   return runtimeConfig;
 }
 
-function hasRuntimeConfig() {
+function hasRuntimeConfig () {
   return !!runtimeConfig;
 }
 
