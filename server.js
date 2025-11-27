@@ -7,17 +7,17 @@ const express = require('express');
 const cors = require('cors');
 const { EventEmitter } = require('events');
 const { MongoClient } = require('mongodb');
-
+const { MessageMedia } = require('whatsapp-web.js');
 const { callAI, botPrefix, isBotText, describeImage } = require('./src/services/ai');
 const { transcribeAudioLocal } = require('./src/services/transcribe');
 const { getRecentContext } = require('./src/utils/context');
-const { getClient, bus: wbus, resetSession } = require('./whatsapp');
+const { getClient, bus: wbus, resetSession, MEDIA_DIR } = require('./whatsapp');
 const {
   setRuntimeConfig,
   getRuntimeConfig,
   hasRuntimeConfig
 } = require('./src/config/runtime-config');
-
+const multer = require('multer');
 // serviço que agrega uso de tokens da OpenAI (texto + visão)
 const { getTokenUsageSummary } = require('./src/services/token-usage');
 
@@ -36,7 +36,14 @@ let mongoClient = null;
 let mongoDb = null;
 let mongoCol = null;
 
-async function connectMongo (mongoUri, dbName = DB_NAME, colName = COL_NAME) {
+const upload = multer({
+  dest: MEDIA_DIR,
+  limits: {
+    fileSize: 15 * 1024 * 1024 // 15 MB 
+  }
+});
+
+async function connectMongo(mongoUri, dbName = DB_NAME, colName = COL_NAME) {
   if (!mongoUri) {
     throw new Error('mongoUri obrigatório');
   }
@@ -44,7 +51,7 @@ async function connectMongo (mongoUri, dbName = DB_NAME, colName = COL_NAME) {
   if (mongoClient) {
     try {
       await mongoClient.close();
-    } catch (_) {}
+    } catch (_) { }
     mongoClient = null;
     mongoDb = null;
     mongoCol = null;
@@ -72,41 +79,41 @@ const bus = new EventEmitter();
 const aiOutbox = new Set(); // guarda IDs das mensagens que NÓS enviamos como IA
 const aiOutboxDraft = new Map(); // key: chatId|sha1(normText(text)) -> expireTs (2min)
 
-function markAiMessage (msg) {
+function markAiMessage(msg) {
   try {
     const id = msg?.id?._serialized || msg?.id || null;
     if (!id) return;
     aiOutbox.add(id);
     setTimeout(() => aiOutbox.delete(id), 10 * 60 * 1000);
-  } catch {}
+  } catch { }
 }
 
-function isAiOutboxId (doc) {
+function isAiOutboxId(doc) {
   const id = doc?._id || doc?.id || null;
   return id ? aiOutbox.has(id) : false;
 }
 
-function normText (s) {
+function normText(s) {
   return String(s || '')
     .replace(/\s+/g, ' ')
     .replace(/[\u2000-\u200F]/g, '')
     .trim();
 }
 
-function sha1 (s) {
+function sha1(s) {
   return crypto.createHash('sha1').update(String(s || '')).digest('hex');
 }
 
-function markAiDraft (chatId, text) {
+function markAiDraft(chatId, text) {
   try {
     const key = `${chatId}|${sha1(normText(text))}`;
     const exp = Date.now() + 2 * 60 * 1000;
     aiOutboxDraft.set(key, exp);
     setTimeout(() => aiOutboxDraft.delete(key), 2 * 60 * 1000 + 5000);
-  } catch {}
+  } catch { }
 }
 
-function isAiDraft (chatId, text) {
+function isAiDraft(chatId, text) {
   const key = `${chatId}|${sha1(normText(text))}`;
   const exp = aiOutboxDraft.get(key);
   return !!(exp && exp > Date.now());
@@ -122,28 +129,28 @@ const lastAISendAt = new Map(); // chatId -> ts do último envio da IA
 // imagens pendentes de instrução do usuário (visão)
 const pendingVisionMap = new Map(); // chatId -> { filePath, mimeType, createdAt }
 
-function getVersion (chatId) {
+function getVersion(chatId) {
   return (aiState.get(chatId) || { version: 0 }).version;
 }
-function bumpVersion (chatId) {
+function bumpVersion(chatId) {
   const s = aiState.get(chatId) || { version: 0 };
   s.version++;
   aiState.set(chatId, s);
   return s.version;
 }
-function setHold (chatId, msFromNow) {
+function setHold(chatId, msFromNow) {
   const holdUntil = Date.now() + msFromNow;
   holdMap.set(chatId, holdUntil);
   emitStatusOne(chatId);
 }
-function getHold (chatId) {
+function getHold(chatId) {
   return holdMap.get(chatId) || 0;
 }
-function aiAllowed (chatId) {
+function aiAllowed(chatId) {
   const h = getHold(chatId);
   return !(h && h > Date.now());
 }
-function getHumanHoldMs () {
+function getHumanHoldMs() {
   try {
     const cfg = getRuntimeConfig();
     const ms = Number(cfg.ai?.HUMAN_HOLD_MS ?? 300000);
@@ -153,7 +160,7 @@ function getHumanHoldMs () {
   }
 }
 
-function enqueueChat (chatId, fn) {
+function enqueueChat(chatId, fn) {
   const prev = queueMap.get(chatId) || Promise.resolve();
 
   const next = prev
@@ -171,10 +178,10 @@ function enqueueChat (chatId, fn) {
 // === TÍTULO DO CHAT (nome/telefone) ===
 const chatTitleCache = new Map(); // chatId -> title
 
-function extractPhone (chatId = '') {
+function extractPhone(chatId = '') {
   return String(chatId).split('@')[0].replace(/\D/g, '');
 }
-function formatMsisdn (digits = '') {
+function formatMsisdn(digits = '') {
   if (!digits) return '';
   if (digits.startsWith('55')) {
     const rest = digits.slice(2);
@@ -193,7 +200,7 @@ function formatMsisdn (digits = '') {
   }
   return digits ? `+${digits}` : '';
 }
-async function getContactTitle (chatId) {
+async function getContactTitle(chatId) {
   try {
     const client = await getClient();
     const chat = await client.getChatById(chatId).catch(() => null);
@@ -211,37 +218,36 @@ async function getContactTitle (chatId) {
     if (name2 && String(name2).trim()) return String(name2).trim();
     const number2 = contact?.number || contact?.id?.user || extractPhone(chatId);
     if (number2) return formatMsisdn(String(number2));
-  } catch (_) {}
+  } catch (_) { }
   const msisdn = extractPhone(chatId);
   return formatMsisdn(msisdn) || chatId;
 }
-async function ensureChatTitle (chatId) {
+async function ensureChatTitle(chatId) {
   if (chatTitleCache.has(chatId)) return chatTitleCache.get(chatId);
   const title = await getContactTitle(chatId);
   chatTitleCache.set(chatId, title);
   return title;
 }
-async function touchChat (chatId, ts = Date.now()) {
+async function touchChat(chatId, ts = Date.now()) {
   seenMap.set(chatId, ts);
   await ensureChatTitle(chatId);
   emitStatusOne(chatId);
 }
 
-// Typing helpers
-function sleep (ms) {
+function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
-function estimateTypingMs (text) {
+function estimateTypingMs(text) {
   const len = String(text || '').length;
   return Math.max(900, Math.min(6000, Math.round(len * 40)));
 }
-async function withTyping (chatId, versionAtStart, work) {
+async function withTyping(chatId, versionAtStart, work) {
   const client = await getClient();
   const chat = await client.getChatById(chatId);
   const ping = async () => {
     try {
       await chat.sendStateTyping();
-    } catch (_) {}
+    } catch (_) { }
   };
   await ping();
   const keep = setInterval(ping, 4500);
@@ -251,25 +257,25 @@ async function withTyping (chatId, versionAtStart, work) {
     clearInterval(keep);
     try {
       await chat.clearState();
-    } catch (_) {}
+    } catch (_) { }
   }
 }
 
-// === VISÃO: helpers pra imagem x figurinha ===
-function isAudioMessage (doc) {
+// === VISÃO pra imagem x figurinha ===
+function isAudioMessage(doc) {
   if (doc?.type && String(doc.type).toLowerCase().includes('audio')) return true;
   const mt = doc?.media?.mimetype || '';
   return /^audio\//i.test(mt);
 }
 
-function isStickerMessage (doc) {
+function isStickerMessage(doc) {
   const t = (doc?.type || '').toLowerCase();
   if (t === 'sticker') return true;
   const mt = (doc?.media?.mimetype || '').toLowerCase();
   return mt === 'image/webp';
 }
 
-function isImagePhoto (doc) {
+function isImagePhoto(doc) {
   const t = (doc?.type || '').toLowerCase();
   const mt = (doc?.media?.mimetype || '').toLowerCase();
 
@@ -280,7 +286,7 @@ function isImagePhoto (doc) {
 }
 
 // visual "não tratado" pela visão = vídeo, etc.
-function isVisualMedia (doc) {
+function isVisualMedia(doc) {
   const t = (doc?.type || '').toLowerCase();
   if (t === 'video') return true;
   const mt = (doc?.media?.mimetype || '').toLowerCase();
@@ -292,7 +298,7 @@ const sseClients = new Set();
 let lastQrDataUrl = null;
 const logBuffer = [];
 
-function pushLog (msg) {
+function pushLog(msg) {
   const item = { ts: Date.now(), msg: String(msg) };
   logBuffer.push(item);
   if (logBuffer.length > 200) logBuffer.shift();
@@ -351,7 +357,7 @@ app.get('/events', async (req, res) => {
   req.on('close', () => sseClients.delete(res));
 });
 
-function emitStatusOne (chatId) {
+function emitStatusOne(chatId) {
   const holdUntil = getHold(chatId);
   const title = chatTitleCache.get(chatId) || extractPhone(chatId) || chatId;
   const payload = {
@@ -374,23 +380,155 @@ setInterval(() => {
     c.write(`data: ${JSON.stringify({ type: 'status', items })}\n\n`);
   }
 }, 5000);
+// *********** HELPERS ************
+let contactGroupsCol = null;
+// Normaliza número para lookup (getNumberId)
+function normalizeDigitsForLookup(rawNumber) {
+  if (!rawNumber) return null;
 
-// Helpers inbound
-function markInboundProcessed (doc) {
+  let digits = String(rawNumber).replace(/\D/g, '');
+  if (!digits) return null;
+
+  // Garante prefixo 55 (Brasil)
+  if (!digits.startsWith('55')) {
+    digits = '55' + digits;
+  }
+
+  // 55 + DDD (2) + número (8 ou 9) => 12 ou 13 dígitos
+  if (digits.length !== 12 && digits.length !== 13) {
+    return null;
+  }
+
+  return digits;
+}
+
+// Usa getNumberId pra garantir que o número é WhatsApp e pegar o _serialized correto
+async function resolveChatIdForSend(client, rawNumber) {
+  const digits = normalizeDigitsForLookup(rawNumber);
+  if (!digits) {
+    return {
+      ok: false,
+      reason: 'invalid_number_format',
+      chatId: null,
+      digits: null
+    };
+  }
+
+  let numberId = null;
+  try {
+    numberId = await client.getNumberId(digits);
+  } catch (e) {
+    console.error('[resolveChatIdForSend] getNumberId error', rawNumber, e);
+  }
+
+  if (!numberId) {
+    // número não usa WhatsApp ou WA não conseguiu resolver
+    return {
+      ok: false,
+      reason: 'not_whatsapp_user',
+      chatId: null,
+      digits
+    };
+  }
+
+  return {
+    ok: true,
+    reason: 'ok',
+    chatId: numberId._serialized, // ex: 5561xxxx@c.us
+    digits
+  };
+}
+
+// Coleção de grupos de disparo
+async function getContactGroupsCollection() {
+  if (!mongoDb) {
+    throw new Error(
+      'Mongo ainda não conectado. Use /start-session no painel para configurar mongoUri.'
+    );
+  }
+
+  if (!contactGroupsCol) {
+    contactGroupsCol = mongoDb.collection('contact_groups');
+    await contactGroupsCol.createIndex({ label: 1 }, { unique: true });
+    await contactGroupsCol.createIndex({ createdAt: 1 });
+  }
+
+  return contactGroupsCol;
+}
+
+function normalizeToChatIdOutbound(rawNumber) {
+  if (!rawNumber) return null;
+
+  let digits = String(rawNumber).replace(/\D/g, '');
+  if (!digits) return null;
+
+  // garante prefixo 55
+  if (!digits.startsWith('55')) {
+    digits = '55' + digits;
+  }
+
+  // +55 + DDD + número (8 ou 9 dígitos) => 12 ou 13 dígitos
+  if (digits.length !== 12 && digits.length !== 13) {
+    return null;
+  }
+
+  return digits + '@c.us';
+}
+
+function normalizeContactsArray(list) {
+  const valid = [];
+  const invalid = [];
+
+  for (const raw of list || []) {
+    const s = String(raw || '').trim();
+    if (!s) continue;
+
+    const chatId = normalizeToChatIdOutbound(s);
+    if (chatId) {
+      valid.push({ raw: s, chatId });
+    } else {
+      invalid.push(s);
+    }
+  }
+
+  return { valid, invalid };
+}
+// Converte "+5511999999999", "5511999999999" ou "11999999999" em "5511999999999@c.us"
+function normalizeToChatId(rawNumber) {
+  if (!rawNumber) return null;
+
+  // tira tudo que não for dígito
+  let digits = String(rawNumber).replace(/\D/g, '');
+  if (!digits) return null;
+
+  // garante prefixo 55 (Brasil)
+  if (!digits.startsWith('55')) {
+    digits = '55' + digits;
+  }
+
+  // +55 + DDD (2) + número (8 ou 9) => 12 ou 13 dígitos
+  if (digits.length !== 12 && digits.length !== 13) {
+    return null;
+  }
+
+  return digits + '@c.us';
+}
+//  inbound
+function markInboundProcessed(doc) {
   const id = doc?._id || doc?.id;
   if (!id) return;
   processedInbounds.add(id);
   setTimeout(() => processedInbounds.delete(id), 3 * 60 * 1000);
 }
-function wasInboundProcessed (doc) {
+function wasInboundProcessed(doc) {
   const id = doc?._id || doc?.id;
   return id ? processedInbounds.has(id) : false;
 }
 
-function isAIBody (text = '') {
+function isAIBody(text = '') {
   return isBotText(normText(String(text)));
 }
-function isBotReply (text = '') {
+function isBotReply(text = '') {
   return isBotText(String(text));
 }
 
@@ -565,7 +703,7 @@ app.get('/token-usage', async (req, res) => {
 /**
  * Fluxo para descrever imagem via IA de visão
  */
-async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
+async function handleDescribeImage({ doc, instruction, filePath, mimeType }) {
   const chatId = doc.chatId;
   const versionAtStart = getVersion(chatId);
 
@@ -859,4 +997,382 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
       pushLog(`[Logger] WhatsApp init error: ${e?.message || e}`);
     }
   });
+  // Envio em massa: texto ou mídia para uma lista de contatos
+  // Body esperado:
+  // {
+  //   "contacts": ["+5511999999999", "+551134567890"],
+  //   "text": "Mensagem opcional",
+  //   "mediaUrl": "https://meuservidor.com/imagem.jpg", // opcional
+  //   "caption": "Legenda opcional para a mídia"        // opcional
+  // }
+  // Envio em massa: texto ou mídia para uma lista de contatos
+  // Body esperado:
+  // {
+  //   "contacts": ["+5511999999999", "+551134567890"],
+  //   "text": "Mensagem opcional",
+  //   "mediaUrl": "https://meuservidor.com/imagem.jpg", // opcional
+  //   "caption": "Legenda opcional para a mídia"        // opcional
+  // }
+  app.post('/send-bulk', async (req, res) => {
+    try {
+      if (TOKEN && req.headers['x-token'] !== TOKEN) {
+        return res.status(401).json({ ok: false, error: 'unauthorized' });
+      }
+
+      const { contacts, text, mediaUrl, caption } = req.body || {};
+
+      if (!Array.isArray(contacts) || !contacts.length) {
+        return res.status(400).json({
+          ok: false,
+          error: 'contacts (array) é obrigatório'
+        });
+      }
+
+      if (!text && !mediaUrl) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Informe pelo menos "text" ou "mediaUrl".'
+        });
+      }
+
+      const client = await getClient();
+
+      const results = [];
+      let success = 0;
+
+      for (const raw of contacts) {
+        // 1) resolve via getNumberId
+        const resolved = await resolveChatIdForSend(client, raw);
+
+        if (!resolved.ok) {
+          results.push({
+            contact: raw,
+            chatId: resolved.chatId,
+            ok: false,
+            error: resolved.reason  // 'invalid_number_format' | 'not_whatsapp_user'
+          });
+          continue;
+        }
+
+        const chatId = resolved.chatId;
+
+        try {
+          if (mediaUrl) {
+            const media = await MessageMedia.fromUrl(mediaUrl);
+            await client.sendMessage(chatId, media, {
+              caption: caption || text || ''
+            });
+          } else {
+            await client.sendMessage(chatId, text);
+          }
+
+          results.push({ contact: raw, chatId, ok: true });
+          success++;
+        } catch (err) {
+          const msg = err?.message || '';
+
+          let errorCode = 'send_error';
+          if (msg.includes('No LID for user')) {
+            errorCode = 'no_lid_for_user';
+          }
+
+          console.error('[send-bulk] erro ao enviar para', raw, err);
+          results.push({
+            contact: raw,
+            chatId,
+            ok: false,
+            error: errorCode
+          });
+        }
+      }
+
+      return res.json({
+        ok: true,
+        count: results.length,
+        success,
+        results
+      });
+    } catch (err) {
+      console.error('/send-bulk error', err);
+      return res
+        .status(500)
+        .json({ ok: false, error: err?.message || 'internal error' });
+    }
+  });
+  // Envio em massa com UPLOAD de arquivo (imagem / documento)
+  app.post('/send-bulk-upload', upload.single('file'), async (req, res) => {
+    try {
+      if (TOKEN && req.headers['x-token'] !== TOKEN) {
+        return res.status(401).json({ ok: false, error: 'unauthorized' });
+      }
+
+      if (!hasRuntimeConfig()) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Sessão ainda não configurada. Use /start-session na aba Configurar.'
+        });
+      }
+
+      const file = req.file;
+      const { caption, text } = req.body || {};
+      let contactsField = req.body.contacts;
+
+      if (!file) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Arquivo (file) obrigatório no multipart/form-data.'
+        });
+      }
+
+      if (!contactsField) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Campo contacts obrigatório (array JSON de números).'
+        });
+      }
+
+      // contacts vem como string JSON no multipart
+      let contactsRaw;
+      try {
+        if (Array.isArray(contactsField)) {
+          contactsRaw = contactsField;
+        } else {
+          contactsRaw = JSON.parse(String(contactsField));
+        }
+      } catch (e) {
+        // fallback: separa por quebra de linha / vírgula / ponto-e-vírgula
+        contactsRaw = String(contactsField)
+          .split(/[\n,;]+/)
+          .map(s => s.trim())
+          .filter(Boolean);
+      }
+
+      if (!Array.isArray(contactsRaw) || !contactsRaw.length) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Nenhum contato válido informado.'
+        });
+      }
+
+      const client = await getClient().catch((err) => {
+        throw new Error('WhatsApp não está conectado: ' + (err?.message || err));
+      });
+
+      // monta MessageMedia a partir do arquivo salvo pelo multer
+      const filePath = file.path; // exemplo: MEDIA_DIR/xxxxx.jpg
+      const mimeType = file.mimetype || 'application/octet-stream';
+      const originalName = file.originalname || 'arquivo';
+
+      const buffer = fs.readFileSync(filePath);
+      const base64 = buffer.toString('base64');
+
+      const media = new MessageMedia(mimeType, base64, originalName);
+
+      const results = [];
+      let success = 0;
+      let failed = 0;
+      const invalidContacts = [];
+
+      const usedCaption =
+        (caption && caption.trim()) ||
+        (text && text.trim()) ||
+        '';
+
+      for (const raw of contactsRaw) {
+        const resolved = await resolveChatIdForSend(client, raw);
+
+        if (!resolved.ok) {
+          invalidContacts.push(raw);
+          results.push({
+            raw,
+            chatId: resolved.chatId,
+            ok: false,
+            error: resolved.error
+          });
+          failed++;
+          continue;
+        }
+
+        try {
+          await client.sendMessage(resolved.chatId, media, {
+            caption: usedCaption || undefined
+          });
+          results.push({ raw, chatId: resolved.chatId, ok: true });
+          success++;
+        } catch (e) {
+          console.error('[send-bulk-upload] erro ao enviar para', resolved.chatId, e);
+          results.push({
+            raw,
+            chatId: resolved.chatId,
+            ok: false,
+            error: e?.message || String(e)
+          });
+          failed++;
+        }
+      }
+
+      return res.json({
+        ok: true,
+        count: contactsRaw.length,
+        success,
+        failed,
+        invalidContacts,
+        results
+      });
+    } catch (err) {
+      console.error('/send-bulk-upload error', err);
+      return res
+        .status(500)
+        .json({ ok: false, error: err?.message || 'internal error' });
+    }
+  });
+
+  // === GRUPOS DE CONTATOS ===
+  // Cria/atualiza grupo de contatos por label
+  app.post('/contact-groups', async (req, res) => {
+    try {
+      if (TOKEN && req.headers['x-token'] !== TOKEN) {
+        return res.status(401).json({ ok: false, error: 'unauthorized' });
+      }
+
+      if (!hasRuntimeConfig() || !mongoDb) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Escaneie o QR Code na aba INICIAR para efetuar disparos em massa.'
+        });
+      }
+
+      const { label, contacts } = req.body || {};
+      const lbl = String(label || '').trim();
+
+      if (!lbl) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Campo "label" é obrigatório.'
+        });
+      }
+
+      if (!Array.isArray(contacts) || !contacts.length) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Campo "contacts" (array) é obrigatório.'
+        });
+      }
+
+      const normalizedContacts = [];
+      const invalidContacts = [];
+
+      for (const item of contacts) {
+        if (!item) continue;
+
+        let name;
+        let phoneRaw;
+
+        if (typeof item === 'string') {
+          // permite só número sem nome
+          name = '';
+          phoneRaw = item;
+        } else {
+          name = String(item.name || '').trim();
+          phoneRaw = item.phone || item.number || item.msisdn || '';
+        }
+
+        const chatId = normalizeToChatIdOutbound(phoneRaw);
+        if (!chatId) {
+          invalidContacts.push({
+            name: name || null,
+            phone: phoneRaw || ''
+          });
+          continue;
+        }
+
+        normalizedContacts.push({
+          name: name || null,
+          phone: phoneRaw,
+          chatId
+        });
+      }
+
+      if (!normalizedContacts.length) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Nenhum contato válido após normalização.',
+          invalidContacts
+        });
+      }
+
+      const col = await getContactGroupsCollection();
+      const now = new Date();
+
+      const baseDoc = {
+        label: lbl,
+        contacts: normalizedContacts,
+        updatedAt: now
+      };
+
+      const existing = await col.findOne({ label: lbl });
+
+      let groupDoc;
+      if (existing) {
+        await col.updateOne(
+          { _id: existing._id },
+          { $set: baseDoc }
+        );
+        groupDoc = await col.findOne({ _id: existing._id });
+      } else {
+        baseDoc.createdAt = now;
+        const ins = await col.insertOne(baseDoc);
+        groupDoc = await col.findOne({ _id: ins.insertedId });
+      }
+
+      return res.json({
+        ok: true,
+        group: groupDoc,
+        invalidContacts
+      });
+    } catch (err) {
+      console.error('/contact-groups POST error', err);
+      return res
+        .status(500)
+        .json({ ok: false, error: err?.message || 'internal error' });
+    }
+  });
+  // Lista grupos de contatos ou filtra por label (?label=...)
+  app.get('/contact-groups', async (req, res) => {
+    try {
+      if (TOKEN && req.headers['x-token'] !== TOKEN) {
+        return res.status(401).json({ ok: false, error: 'unauthorized' });
+      }
+
+      if (!hasRuntimeConfig() || !mongoDb) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Sessão ainda não configurada. Use /start-session no painel.'
+        });
+      }
+
+      const { label } = req.query || {};
+      const col = await getContactGroupsCollection();
+
+      const filter = label
+        ? { label: String(label) }
+        : {};
+
+      const groups = await col
+        .find(filter)
+        .sort({ label: 1 })
+        .toArray();
+
+      return res.json({
+        ok: true,
+        groups
+      });
+    } catch (err) {
+      console.error('/contact-groups GET error', err);
+      return res
+        .status(500)
+        .json({ ok: false, error: err?.message || 'internal error' });
+    }
+  });
+
 })();
