@@ -1,1389 +1,522 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <title>Iano Whatsapp • Visão do Projeto</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    :root {
-      --bg-gradient-1: #020617;
-      --bg-gradient-2: #020617;
-      --accent-1: #22c55e;
-      --accent-2: #0ea5e9;
-      --accent-3: #6366f1;
-      --accent-4: #ec4899;
-      --card-bg: rgba(15, 23, 42, 0.78);
-      --card-border: rgba(148, 163, 184, 0.45);
-      --text-main: #e5e7eb;
-      --text-muted: #9ca3af;
-      --text-strong: #f9fafb;
-      --danger: #f97373;
-      --success: #4ade80;
-      --warning: #fbbf24;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      height: 100%;
-      scroll-behavior: smooth;
-    }
-
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-        "Segoe UI", sans-serif;
-      color: var(--text-main);
-      background: radial-gradient(circle at top, #0f172a 0, #020617 55%, #000 100%);
-      position: relative;
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* Background blobs */
-    .bg-blur {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: -2;
-      background:
-        radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.15), transparent 50%),
-        radial-gradient(circle at 100% 0%, rgba(34, 197, 94, 0.18), transparent 55%),
-        radial-gradient(circle at 50% 100%, rgba(99, 102, 241, 0.2), transparent 55%);
-      filter: blur(2px);
-    }
-
-    .bg-overlay {
-      position: fixed;
-      inset: 0;
-      background: linear-gradient(
-        135deg,
-        rgba(15, 23, 42, 0.9),
-        rgba(15, 23, 42, 0.96)
-      );
-      z-index: -3;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 1.5rem 1.25rem 3rem;
-    }
-
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 30;
-      backdrop-filter: blur(18px);
-      background: linear-gradient(
-        to bottom,
-        rgba(15, 23, 42, 0.9),
-        rgba(15, 23, 42, 0.75),
-        transparent
-      );
-      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
-    }
-
-    .header-inner {
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 0.75rem 1.25rem 0.9rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-
-    .logo {
-      display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
-    }
-
-    .logo-title {
-      font-size: 1.1rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-    }
-
-    .logo-main {
-      font-weight: 700;
-      font-size: 1.25rem;
-      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      display: flex;
-      align-items: baseline;
-      gap: 0.25rem;
-    }
-
-    .logo-main span {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      background: none;
-      -webkit-background-clip: initial;
-      background-clip: initial;
-    }
-
-    nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      justify-content: flex-end;
-    }
-
-    .nav-link {
-      border-radius: 999px;
-      padding: 0.3rem 0.8rem;
-      font-size: 0.8rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.14), rgba(15, 23, 42, 0.9));
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.18s ease-out;
-      white-space: nowrap;
-    }
-
-    .nav-link:hover {
-      color: var(--text-strong);
-      border-color: rgba(148, 163, 184, 0.9);
-      transform: translateY(-1px);
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.9);
-    }
-
-    .nav-link.primary {
-      border: none;
-      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-      color: #020617;
-      font-weight: 600;
-    }
-
-    .nav-link.primary:hover {
-      box-shadow: 0 10px 40px rgba(34, 197, 94, 0.35);
-      transform: translateY(-1px) scale(1.01);
-    }
-
-    /* Hero */
-    .hero {
-      display: grid;
-      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-      gap: 2rem;
-      margin-top: 1.5rem;
-      align-items: center;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.15rem 0.6rem;
-      border-radius: 999px;
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.15), rgba(15, 23, 42, 0.9));
-      margin-bottom: 0.8rem;
-    }
-
-    .badge-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: radial-gradient(circle at center, var(--success), rgba(34, 197, 94, 0.15));
-      box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
-    }
-
-    .hero-title {
-      font-size: clamp(1.9rem, 3.2vw, 2.4rem);
-      line-height: 1.15;
-      color: var(--text-strong);
-      margin-bottom: 0.7rem;
-    }
-
-    .hero-title span {
-      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    .hero-subtitle {
-      font-size: 0.92rem;
-      color: var(--text-muted);
-      max-width: 34rem;
-      margin-bottom: 1rem;
-    }
-
-    .hero-meta {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      margin-bottom: 1.4rem;
-      line-height: 1.4;
-    }
-
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.35rem;
-      border-radius: 999px;
-      padding: 0.5rem 1.1rem;
-      font-size: 0.85rem;
-      border: 1px solid rgba(148, 163, 184, 0.6);
-      background: radial-gradient(circle at top left, rgba(30, 64, 175, 0.55), rgba(15, 23, 42, 0.95));
-      color: var(--text-strong);
-      cursor: pointer;
-      transition: all 0.18s ease-out;
-      text-decoration: none;
-    }
-
-    .btn span.icon {
-      font-size: 1.05rem;
-    }
-
-    .btn.primary {
-      border: none;
-      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-      color: #020617;
-      font-weight: 600;
-    }
-
-    .btn.secondary {
-      background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.22), rgba(15, 23, 42, 0.96));
-    }
-
-    .btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 35px rgba(15, 23, 42, 0.85);
-    }
-
-    .btn.primary:hover {
-      box-shadow: 0 14px 40px rgba(34, 197, 94, 0.35);
-    }
-
-    .hero-footnote {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      opacity: 0.9;
-    }
-
-    .hero-card {
-      border-radius: 1.5rem;
-      padding: 1.25rem;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(20px);
-      display: flex;
-      flex-direction: column;
-      gap: 0.9rem;
-    }
-
-    .hero-pill-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-    }
-
-    .pill {
-      border-radius: 999px;
-      padding: 0.25rem 0.6rem;
-      font-size: 0.75rem;
-      background: radial-gradient(circle at top left, rgba(15, 118, 110, 0.3), rgba(15, 23, 42, 0.95));
-      border: 1px solid rgba(45, 212, 191, 0.6);
-      color: #e0f2fe;
-    }
-
-    .pill.secondary {
-      background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.35), rgba(15, 23, 42, 0.96));
-      border-color: rgba(129, 140, 248, 0.7);
-    }
-
-    .pill.danger {
-      background: radial-gradient(circle at top left, rgba(248, 113, 113, 0.3), rgba(15, 23, 42, 0.96));
-      border-color: rgba(248, 113, 113, 0.8);
-      color: #fee2e2;
-    }
-
-    .hero-card h3 {
-      font-size: 0.98rem;
-      color: var(--text-strong);
-    }
-
-    .hero-card p {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      line-height: 1.4;
-    }
-
-    .hero-stats {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.75rem;
-    }
-
-    .stat {
-      padding: 0.6rem 0.7rem;
-      border-radius: 0.9rem;
-      background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.96));
-      border: 1px dashed rgba(148, 163, 184, 0.55);
-    }
-
-    .stat-label {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      margin-bottom: 0.15rem;
-    }
-
-    .stat-value {
-      font-size: 0.9rem;
-      color: var(--text-strong);
-      font-weight: 600;
-    }
-
-    /* Generic sections */
-    section {
-      margin-top: 2.4rem;
-    }
-
-    .section-title {
-      font-size: 1.1rem;
-      margin-bottom: 0.6rem;
-      color: var(--text-strong);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    .section-title span.icon {
-      font-size: 1.1rem;
-    }
-
-    .section-subtitle {
-      font-size: 0.86rem;
-      color: var(--text-muted);
-      margin-bottom: 1.4rem;
-      max-width: 40rem;
-    }
-
-    .glass-row {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1.2rem;
-    }
-
-    .glass-card {
-      border-radius: 1.4rem;
-      padding: 1.1rem 1.2rem;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
-      backdrop-filter: blur(20px);
-    }
-
-    .glass-card h3 {
-      font-size: 0.95rem;
-      color: var(--text-strong);
-      margin-bottom: 0.4rem;
-    }
-
-    .glass-card p,
-    .glass-card li {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-
-    .tag-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .tag {
-      font-size: 0.7rem;
-      padding: 0.18rem 0.55rem;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      color: var(--text-muted);
-    }
-
-    .tag.success {
-      border-color: rgba(74, 222, 128, 0.8);
-      color: #bbf7d0;
-    }
-
-    .tag.warning {
-      border-color: rgba(251, 191, 36, 0.9);
-      color: #fef3c7;
-    }
-
-    .tag.danger {
-      border-color: rgba(248, 113, 113, 0.9);
-      color: #fee2e2;
-    }
-
-    /* Tabs (Hoje x Futuro) */
-    .tab-header {
-      display: inline-flex;
-      padding: 0.25rem;
-      border-radius: 999px;
-      background: radial-gradient(circle at top left, rgba(31, 41, 55, 0.95), rgba(15, 23, 42, 0.96));
-      border: 1px solid rgba(148, 163, 184, 0.55);
-      margin-bottom: 1rem;
-    }
-
-    .tab-button {
-      border-radius: 999px;
-      padding: 0.35rem 0.9rem;
-      font-size: 0.78rem;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.18s ease-out;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-    }
-
-    .tab-button span.icon {
-      font-size: 0.9rem;
-    }
-
-    .tab-button.active {
-      background: linear-gradient(135deg, var(--accent-3), var(--accent-4));
-      color: #020617;
-      font-weight: 600;
-      box-shadow: 0 12px 30px rgba(79, 70, 229, 0.35);
-    }
-
-    .tab-panel {
-      display: none;
-      animation: fadeIn 0.24s ease-out;
-    }
-
-    .tab-panel.active {
-      display: block;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(3px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* List styles */
-    .bullet-list {
-      list-style: none;
-      margin-top: 0.25rem;
-    }
-
-    .bullet-list li {
-      position: relative;
-      padding-left: 1.1rem;
-      margin-bottom: 0.2rem;
-    }
-
-    .bullet-list li::before {
-      content: "";
-      position: absolute;
-      left: 0.25rem;
-      top: 0.55em;
-      width: 5px;
-      height: 5px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-    }
-
-    /* How to run */
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1.1rem;
-    }
-
-    .step-number {
-      width: 1.6rem;
-      height: 1.6rem;
-      border-radius: 999px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-      color: #020617;
-      font-size: 0.78rem;
-      font-weight: 600;
-      margin-right: 0.4rem;
-    }
-
-    code, pre {
-      font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular,
-        Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 0.78rem;
-    }
-
-    code {
-      background: rgba(15, 23, 42, 0.85);
-      padding: 0.1rem 0.3rem;
-      border-radius: 0.35rem;
-      border: 1px solid rgba(51, 65, 85, 0.9);
-      color: #e0f2fe;
-    }
-
-    pre {
-      background: rgba(15, 23, 42, 0.95);
-      border-radius: 0.9rem;
-      padding: 0.7rem 0.85rem;
-      border: 1px solid rgba(30, 64, 175, 0.75);
-      overflow-x: auto;
-      margin-top: 0.5rem;
-    }
-
-    /* Endpoints accordion */
-    .accordion {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1rem;
-    }
-
-    .accordion-item {
-      border-radius: 1.2rem;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.9);
-      backdrop-filter: blur(20px);
-      overflow: hidden;
-    }
-
-    .accordion-header {
-      padding: 0.65rem 0.85rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-      cursor: pointer;
-    }
-
-    .endpoint-title {
-      display: flex;
-      flex-direction: column;
-      gap: 0.05rem;
-    }
-
-    .endpoint-name {
-      font-size: 0.82rem;
-      color: var(--text-strong);
-    }
-
-    .endpoint-method {
-      font-size: 0.7rem;
-      padding: 0.1rem 0.45rem;
-      border-radius: 999px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-weight: 600;
-    }
-
-    .method-get {
-      background: rgba(59, 130, 246, 0.18);
-      color: #bfdbfe;
-      border: 1px solid rgba(59, 130, 246, 0.7);
-    }
-
-    .method-post {
-      background: rgba(34, 197, 94, 0.18);
-      color: #bbf7d0;
-      border: 1px solid rgba(34, 197, 94, 0.7);
-    }
-
-    .accordion-chevron {
-      width: 1.6rem;
-      height: 1.6rem;
-      border-radius: 999px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.18), rgba(15, 23, 42, 0.96));
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      transition: transform 0.2s ease-out;
-    }
-
-    .accordion-item.open .accordion-chevron {
-      transform: rotate(90deg);
-    }
-
-    .accordion-body {
-      max-height: 0;
-      opacity: 0;
-      padding: 0 0.85rem;
-      padding-bottom: 0;
-      transition: all 0.2s ease-out;
-    }
-
-    .accordion-item.open .accordion-body {
-      max-height: 500px;
-      opacity: 1;
-      padding-bottom: 0.75rem;
-    }
-
-    .endpoint-desc {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin: 0.35rem 0 0.4rem;
-    }
-
-    footer {
-      padding: 1.5rem 1.25rem 2rem;
-      border-top: 1px solid rgba(51, 65, 85, 0.9);
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      text-align: center;
-      background: radial-gradient(circle at bottom, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 1));
-    }
-
-    footer a {
-      color: #bae6fd;
-      text-decoration: none;
-    }
-
-    footer a:hover {
-      text-decoration: underline;
-    }
-
-    /* Responsive */
-    @media (max-width: 960px) {
-      .hero {
-        grid-template-columns: minmax(0, 1fr);
-      }
-
-      .hero-card {
-        order: -1;
-        margin-bottom: 1.3rem;
-      }
-
-      .glass-row,
-      .steps,
-      .accordion {
-        grid-template-columns: minmax(0, 1fr);
-      }
-
-      .header-inner {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      nav {
-        width: 100%;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .hero {
-        gap: 1.4rem;
-      }
-
-      .hero-stats {
-        grid-template-columns: minmax(0, 1fr);
-      }
-
-      .container {
-        padding-inline: 1rem;
-      }
-
-      .hero-title {
-        font-size: 1.7rem;
-      }
-
-      .section-title {
-        font-size: 1rem;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="bg-overlay"></div>
-  <div class="bg-blur"></div>
-
-  <header>
-    <div class="header-inner">
-      <div class="logo">
-        <div class="logo-title">PRTI • Especialista em Automação • UFG &amp; TJGO</div>
-        <div class="logo-main">
-          Iano Whatsapp
-          <span></span>
-        </div>
-      </div>
-      <nav>
-        <button class="nav-link" data-scroll="#estado">Como está hoje</button>
-        <button class="nav-link" data-scroll="#estado">Próxima entrega</button>
-        <button class="nav-link" data-scroll="#rodar">Como rodar</button>
-        <button class="nav-link" data-scroll="#endpoints">Endpoints</button>
-        <button class="nav-link primary" data-scroll="#visao-negocio">Objetivo de negócio</button>
-      </nav>
-    </div>
-  </header>
-
-  <main class="container">
-    <!-- HERO -->
-    <section class="hero" id="topo">
-      <div>
-        <div class="badge">
-          <span class="badge-dot"></span>
-          Programa de Residência em Tecnologia da Informação – UFG &amp; TJGO
-        </div>
-        <h1 class="hero-title">
-          Agente de I.A SDR no <span>WhatsApp Web</span>, com foco em tribunais.
-        </h1>
-        <p class="hero-subtitle">
-          Projeto com Docker + Node.js integrado ao WhatsApp Web onde o usuário pode configurar
-          sua própria I.A – com foco em SDR e suporte – e conectar-se a endpoints que podem ser
-          integrados a outros sistemas gratuitamente.
-        </p>
-        <p class="hero-meta">
-          <strong>Profº:</strong> Leonardo Antônio Alves<br />
-          <strong>Residente:</strong> Samuel Victor Oliveira Lima – Matrícula 2025200264.
-        </p>
-
-        <div class="hero-actions">
-          <button class="btn primary" data-scroll="#estado">
-            <span class="icon">⚙️</span>
-            Ver estado atual x entrega final
-          </button>
-          <button class="btn secondary" data-scroll="#rodar">
-            <span class="icon">🚀</span>
-            Como rodar com Docker (local)
-          </button>
-        </div>
-
-        <p class="hero-footnote">
-          No protótipo atual, o Iano Whatsapp já conecta WhatsApp Web, OpenAI e MongoDB.
-          A próxima entrega foca em deixar a configuração da I.A dinâmica, mantendo no
-          <code>.env</code> apenas a string de conexão do Mongo.
-        </p>
-      </div>
-
-      <aside class="hero-card">
-        <div class="hero-pill-row">
-          <span class="pill">SDR / Suporte automático</span>
-          <span class="pill secondary">Takeover humano com cooldown</span>
-          <span class="pill danger">Protótipo: prompts engessados</span>
-        </div>
-        <h3>Contexto da entrega</h3>
-        <p>
-          A entrega principal é configurar um agente de I.A para suporte e onboarding via
-          WhatsApp de um <strong>tribunal fictício</strong>, permitindo:
-        </p>
-        <ul class="bullet-list">
-          <li>Pré-atendimento de cidadãos (FAQ, orientações iniciais).</li>
-          <li>Triagem de demandas, com indicação de canal/processo adequado.</li>
-          <li>Integração futura com sistemas internos via endpoints HTTP.</li>
-        </ul>
-
-        <div class="hero-stats">
-          <div class="stat">
-            <div class="stat-label">Perfis de usuário</div>
-            <div class="stat-value">
-              PERFIL A &middot; pré-atendimento simples<br />
-              PERFIL B &middot; integrações e endpoints
-            </div>
+  <head>
+    <meta charset="UTF-8" />
+    <title>IanoWhatsapp · Agente de IA para WhatsApp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="IANO WhatsApp é um engine open source para criar seu próprio agente de IA no WhatsApp, com configuração via frontend, poucos envs e integração simples com seus sistemas."
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/png" sizes="128x128" href="https://static.whatsapp.net/rsrc.php/v4/yP/r/rYZqPCBaG70.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="https://static.whatsapp.net/rsrc.php/v4/yP/r/rYZqPCBaG70.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://static.whatsapp.net/rsrc.php/v4/yP/r/rYZqPCBaG70.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://static.whatsapp.net/rsrc.php/v4/yP/r/rYZqPCBaG70.png">
+    <link rel="icon" type="image/ico" href="https://static.whatsapp.net/rsrc.php/v4/yP/r/rYZqPCBaG70.png">
+  </head>
+  </head>
+  <body>
+    <header class="top-nav">
+      <div class="nav-inner">
+        <a href="#hero" class="brand">
+          <div class="brand-icon">
+            <img src="https://static.whatsapp.net/rsrc.php/v4/yP/r/rYZqPCBaG70.png" width="34px">
           </div>
-          <div class="stat">
-            <div class="stat-label">Stack</div>
-            <div class="stat-value">
-              Docker • Node/Express • WhatsApp Web<br />
-              OpenAI • MongoDB • Quasar + Vue 3
-            </div>
+          <div class="brand-text">
+            <span class="brand-title">IanoWhatsapp</span>
+            <span class="brand-sub">Agente de IA para WhatsApp</span>
           </div>
-        </div>
-      </aside>
-    </section>
+        </a>
 
-    <!-- OBJETIVO DE NEGÓCIO -->
-    <section id="visao-negocio">
-      <h2 class="section-title">
-        <span class="icon">🎯</span>
-        Objetivo de Negócio
-      </h2>
-      <p class="section-subtitle">
-        Reduzir o tempo e o esforço de atendimento inicial (onboarding e dúvidas frequentes)
-        de cidadãos/usuários de um tribunal, oferecendo um pré-atendimento inteligente via
-        WhatsApp, com possibilidade de takeover humano e integração com outros sistemas.
-      </p>
-
-      <div class="glass-row">
-        <div class="glass-card">
-          <h3>Metas principais</h3>
-          <ul class="bullet-list">
-            <li>Diminuir a carga de trabalho repetitiva da equipe humana.</li>
-            <li>Aumentar a agilidade e padronização das respostas de primeiro nível.</li>
-            <li>Centralizar registros de conversas em MongoDB para análise posterior.</li>
-            <li>Facilitar integrações com sistemas legados via endpoints HTTP simples.</li>
-          </ul>
-        </div>
-        <div class="glass-card">
-          <h3>Indicadores de sucesso (KPIs)</h3>
-          <ul class="bullet-list">
-            <li>Redução do tempo médio da primeira resposta no WhatsApp.</li>
-            <li>Percentual de dúvidas resolvidas diretamente pelo agente de I.A.</li>
-            <li>Redução do volume de atendimentos humanos para demandas simples.</li>
-            <li>Número de integrações ativas com sistemas do tribunal (via endpoints).</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <!-- COMO ESTÁ HOJE x PRÓXIMA ENTREGA -->
-    <section id="estado">
-      <h2 class="section-title">
-        <span class="icon">🧪</span>
-        Como está HOJE x Próxima Entrega
-      </h2>
-      <p class="section-subtitle">
-        A base técnica está pronta: WhatsApp Web + Node + OpenAI + MongoDB. Hoje o protótipo
-        funciona com prompts e configurações fixas; a entrega final leva o projeto ao nível
-        especialista, com configuração dinâmica da I.A via painel, deixando no <code>.env</code>
-        apenas a string de conexão do Mongo.
-      </p>
-
-      <div class="tab-header">
-        <button class="tab-button active" data-tab="hoje">
-          <span class="icon">📍</span> Como está hoje (protótipo)
+        <button class="nav-toggle" id="navToggle" aria-label="Abrir menu">
+          <span></span><span></span><span></span>
         </button>
-        <button class="tab-button" data-tab="futuro">
-          <span class="icon">🚀</span> Expectativa da entrega
-        </button>
+
+        <nav class="nav-links" id="navLinks">
+          <a href="#about">Sobre</a>
+          <a href="#flows">Fluxos</a>
+          <a href="#docs">API</a>
+          <a href="#run">Como rodar</a>
+          <a href="#stack">Stack</a>
+          <a href="#contact">Contato</a>
+          <a
+            href="https://github.com/samuelvictorol/iano-whatsapp"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="nav-cta"
+          >
+            GitHub
+          </a>
+        </nav>
       </div>
+    </header>
 
-      <div class="tab-panel active" id="tab-hoje">
-        <div class="glass-row">
-          <div class="glass-card">
-            <div class="tag-row">
-              <span class="tag danger">Protótipo fixo</span>
-              <span class="tag">Versão atual do repositório</span>
-            </div>
-            <h3>Arquitetura e fluxo atual</h3>
-            <ul class="bullet-list">
-              <li>Backend Node.js + Express rodando via Docker Compose.</li>
-              <li>Conexão com WhatsApp via <code>whatsapp-web.js</code> (LocalAuth + QR Code).</li>
-              <li>
-                Todas as mensagens são normalizadas e armazenadas em MongoDB na coleção
-                <code>messages</code>, com uso de índices e TTL configurável (<code>MSG_TTL_DAYS</code>).
-              </li>
-              <li>
-                Áudios são transcritos localmente (<code>transcribeAudioLocal</code>)
-                antes de ir para a I.A.
-              </li>
-              <li>
-                A I.A é chamada via OpenAI Chat Completions, com <strong>JSON Schema fixo</strong>
-                retornando campos como <code>intencao</code> e <code>ia_reply_messages</code>.
-              </li>
-            </ul>
-          </div>
-
-          <div class="glass-card">
-            <div class="tag-row">
-              <span class="tag warning">Prompts engessados</span>
-            </div>
-            <h3>Configuração da I.A hoje</h3>
-            <ul class="bullet-list">
-              <li>
-                Persona, contexto, regras e catálogo estão em <code>src/prompts.js</code>,
-                escritos diretamente no código.
-              </li>
-              <li>
-                Variáveis sensíveis e de comportamento são definidas em
-                <code>.env</code>/<code>.env.example</code>, como:
-                <code>OPENAI_API_KEY</code>, <code>OPENAI_CHAT_MODEL</code>,
-                <code>IA_CONTEXT_MAX_MINUTES</code>, <code>HUMAN_HOLD_MS</code>,
-                <code>MSG_TTL_DAYS</code>, <code>DASH_TOKEN</code>, entre outras.
-              </li>
-              <li>
-                Alterar persona, contexto ou regras exige modificar arquivos de código
-                e recriar a imagem Docker.
-              </li>
-              <li>
-                O foco atual é comprovar o fluxo técnico de ponta a ponta,
-                não a auto-configuração ainda.
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="glass-row" style="margin-top:1.1rem;">
-          <div class="glass-card">
-            <div class="tag-row">
-              <span class="tag success">Painel em tempo real</span>
-            </div>
-            <h3>Painel + logs (projeto atual)</h3>
-            <ul class="bullet-list">
-              <li>SPA em Quasar + Vue 3 consumindo dados via SSE em <code>GET /events</code>.</li>
-              <li>
-                O painel recebe:
-                <strong>QR Code</strong> da sessão, <strong>logs</strong> em tempo real e
-                <strong>status dos chats</strong> (IA ON/OFF, cooldown humano, título do chat).
-              </li>
-              <li>
-                A sessão do WhatsApp pode ser reiniciada manualmente via
-                endpoint <code>POST /reset-session</code>.
-              </li>
-              <li>
-                Existe um endpoint HTTP simples para envio de texto
-                (<code>POST /send-text</code>) usado por integrações e pela própria SPA.
-              </li>
-            </ul>
-          </div>
-
-          <div class="glass-card">
-            <div class="tag-row">
-              <span class="tag">Limitações atuais</span>
-            </div>
-            <h3>O que ainda não é dinâmico?</h3>
-            <ul class="bullet-list">
-              <li>Cadastro/alteração da persona da I.A é feito diretamente no código.</li>
-              <li>
-                Parâmetros como <code>IA_CONTEXT_MAX_MINUTES</code> e
-                <code>HUMAN_HOLD_MS</code> são alterados via <code>.env</code> e exigem
-                restart do container.
-              </li>
-              <li>
-                Não há ainda uma tela de configuração persistente para
-                catálogo de produtos/serviços ou regras avançadas.
-              </li>
-              <li>
-                Configuração ainda é pensada para um único “cliente” (uma empresa/tribunal)
-                por vez, com pouca multi-tenantização.
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="tab-panel" id="tab-futuro">
-        <div class="glass-row">
-          <div class="glass-card">
-            <div class="tag-row">
-              <span class="tag success">Nível especialista</span>
-              <span class="tag">TO-BE (entrega esperada)</span>
-            </div>
-            <h3>I.A auto-configurável via painel</h3>
-            <ul class="bullet-list">
-              <li>
-                Criar telas no painel (Quasar + Vue 3) para configurar dinamicamente:
-                <ul class="bullet-list" style="margin-top:0.3rem;">
-                  <li>Chave da OpenAI (<code>OPENAI_API_KEY</code>).</li>
-                  <li>Modelo de chat (<code>OPENAI_CHAT_MODEL</code>).</li>
-                  <li>Tempo de contexto da conversa (<code>IA_CONTEXT_MAX_MINUTES</code>).</li>
-                  <li>Cooldown do humano (<code>HUMAN_HOLD_MS</code>).</li>
-                  <li>Persona, contexto, regras e metadados da I.A.</li>
-                  <li>Catálogo (título, descrição, imagens, preço, categoria, etc.).</li>
-                </ul>
-              </li>
-              <li>
-                Essas configurações passam a ser salvas em MongoDB como documento
-                de configuração, e <strong>não mais em arquivos .js ou .env</strong>.
-              </li>
-              <li>
-                O backend passa a ler as configurações em runtime, permitindo ajustes
-                sem rebuild de container.
-              </li>
-            </ul>
-          </div>
-
-          <div class="glass-card">
-            <div class="tag-row">
-              <span class="tag warning">.env minimalista</span>
-            </div>
-            <h3>Somente Mongo no .env</h3>
-            <ul class="bullet-list">
-              <li>
-                No resultado final, a única informação crítica a ser
-                configurada manualmente no <code>.env</code> será:
-                <strong>a string de conexão do MongoDB</strong>
-                (<code>MONGODB_URI</code>).
-              </li>
-              <li>
-                Demais parâmetros (I.A, catálogo, timeouts, token do painel, etc.)
-                serão:
-                <strong>dinâmicos (via painel)</strong> ou
-                <strong>fixos em código com valores seguros</strong>.
-              </li>
-              <li>
-                Isso facilita instalar o sistema em máquinas de clientes
-                sem conhecimento técnico profundo (basta informar o Mongo).
-              </li>
-              <li>
-                Abre caminho para múltiplos “perfis de configuração” no futuro
-                (ex.: vários tribunais/órgãos usando o mesmo core).
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="glass-row" style="margin-top:1.1rem;">
-          <div class="glass-card">
-            <div class="tag-row">
-              <span class="tag">Fluxo enxuto (TO-BE)</span>
-            </div>
-            <h3>Processo alvo de atendimento</h3>
-            <ul class="bullet-list">
-              <li>
-                Cidadão envia mensagem/áudio para o WhatsApp do tribunal fictício.
-              </li>
-              <li>
-                Iano normaliza, transcreve (se áudio) e registra a mensagem em Mongo.
-              </li>
-              <li>
-                I.A lê contexto recente + regras configuradas pelo painel e responde.
-              </li>
-              <li>
-                Em cenários fora de escopo, o bot orienta o canal correto
-                (balcão, sistema processual, telefone, etc.).
-              </li>
-              <li>
-                Logs e métricas podem ser usados para melhorar continuamente
-                o fluxo e treinar a equipe.
-              </li>
-            </ul>
-          </div>
-
-          <div class="glass-card">
-            <div class="tag-row">
-              <span class="tag">Sustentabilidade</span>
-            </div>
-            <h3>Documentação e manutenção</h3>
-            <ul class="bullet-list">
-              <li>
-                README e documentação de endpoints descrevendo claramente
-                como integrar com o Iano.
-              </li>
-              <li>
-                Guia de operação para subir o sistema via Docker, autenticar QR Code e
-                ajustar parâmetros via painel.
-              </li>
-              <li>
-                Guia de manutenção explicando como evoluir prompts, integrações e regras
-                sem comprometer a arquitetura.
-              </li>
-              <li>
-                Conexão direta com os tópicos da disciplina: automação, uso de I.A,
-                prototipagem a partir de prompts, APIs e SPA responsiva.
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- COMO RODAR -->
-    <section id="rodar">
-      <h2 class="section-title">
-        <span class="icon">🚀</span>
-        Como rodar o Iano Whatsapp (Docker local)
-      </h2>
-      <p class="section-subtitle">
-        Abaixo um fluxo resumido baseado no projeto atual. O foco da residência é permitir
-        que futuros usuários precisem configurar apenas o Mongo; contudo, na versão atual
-        ainda existem outras variáveis em <code>.env</code>.
-      </p>
-
-      <div class="steps">
-        <div class="glass-card">
-          <h3><span class="step-number">1</span> Clonar o repositório</h3>
-          <p>Repositório oficial do código fonte:</p>
-          <pre><code>git clone https://github.com/samuelvictorol/iano-whatsapp.git
-cd iano-whatsapp</code></pre>
-          <p style="margin-top:0.4rem;">
-            Opcionalmente, consulte também o board de backlog e kanban:
-            <br />
-            <code>https://github.com/users/samuelvictorol/projects/6</code>
-          </p>
-        </div>
-
-        <div class="glass-card">
-          <h3><span class="step-number">2</span> Configurar o .env</h3>
-          <p>
-            Hoje: copie o arquivo <code>.env.example</code> para <code>.env</code> e ajuste
-            as variáveis principais, em especial:
-          </p>
-          <ul class="bullet-list">
-            <li><code>MONGODB_URI</code> – string de conexão do MongoDB.</li>
-            <li><code>MONGO_DB</code> e <code>MONGO_COL</code> (opcional, com defaults).</li>
-            <li><code>OPENAI_API_KEY</code> e <code>OPENAI_CHAT_MODEL</code>.</li>
-            <li><code>IA_CONTEXT_MAX_MINUTES</code> e <code>HUMAN_HOLD_MS</code>.</li>
-            <li><code>DASH_TOKEN</code> para proteger o painel, se desejado.</li>
-          </ul>
-          <p style="margin-top:0.35rem;font-size:0.78rem;color:var(--text-muted);">
-            Futuro (TO-BE): apenas <code>MONGODB_URI</code> continuará sendo configurado
-            manualmente; demais parâmetros serão preenchidos via painel.
-          </p>
-        </div>
-
-        <div class="glass-card">
-          <h3><span class="step-number">3</span> Subir com Docker Compose</h3>
-          <p>Com o Docker instalado:</p>
-          <pre><code>docker compose up -d --build</code></pre>
-          <p style="margin-top:0.4rem;">
-            Após subir, o servidor Node (logger) ficará ouvindo na porta
-            definida em <code>PORT</code> (por padrão, <code>10000</code>).
-          </p>
-          <p style="margin-top:0.3rem;">
-            A SPA em Quasar (frontend) se conecta ao backend via HTTP e
-            ao canal <code>/events</code> (SSE) para logs, status e QR Code.
-          </p>
-        </div>
-
-        <div class="glass-card">
-          <h3><span class="step-number">4</span> Autenticar o WhatsApp e testar</h3>
-          <ul class="bullet-list">
-            <li>Acesse o painel (ex.: <code>http://localhost:10000</code> ou porta exposta).</li>
-            <li>Escaneie o QR Code com o app do WhatsApp (aparece no painel).</li>
-            <li>Aguarde a sessão ficar “conectada”.</li>
-            <li>
-              Envie uma mensagem de outro número para o WhatsApp conectado
-              e observe:
-              <ul class="bullet-list" style="margin-top:0.25rem;">
-                <li>Registro automático no MongoDB.</li>
-                <li>Respostas da I.A seguindo o prompt atual.</li>
-                <li>Takeover humano se alguém responder manualmente.</li>
-              </ul>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <!-- ENDPOINTS -->
-    <section id="endpoints">
-      <h2 class="section-title">
-        <span class="icon">📡</span>
-        Endpoints disponíveis (versão atual)
-      </h2>
-      <p class="section-subtitle">
-        O backend do Iano Whatsapp expõe alguns endpoints HTTP simples para interação
-        com o WhatsApp e com o painel em tempo real. A seguir, um resumo dos principais
-        endpoints da versão atual do projeto.
-      </p>
-
-      <div class="accordion">
-        <!-- /events -->
-        <div class="accordion-item">
-          <div class="accordion-header">
-            <div class="endpoint-title">
-              <span class="endpoint-name">/events</span>
-              <span style="font-size:0.72rem;color:var(--text-muted);">
-                Server-Sent Events – QR Code, logs e status de chats
-              </span>
-            </div>
-            <span class="endpoint-method method-get">GET</span>
-            <div class="accordion-chevron">›</div>
-          </div>
-          <div class="accordion-body">
-            <p class="endpoint-desc">
-              Endpoint de <strong>Server-Sent Events (SSE)</strong> usado pelo painel
-              Quasar/Vue para receber atualizações em tempo real:
+    <main>
+      <!-- HERO -->
+      <section id="hero" class="hero">
+        <div class="hero-inner">
+          <div class="hero-text">
+            <div class="hero-pill">Open source · Multi-tenant · Plugável</div>
+            <h1>Configure sua própria IA para o WhatsApp.</h1>
+            <p>
+              O <strong>IanoWhatsapp</strong> conecta o
+              <span class="inline-highlight">WhatsApp Web</span>,
+              <span class="inline-highlight">OpenAI</span> e os seus sistemas
+              via HTTP. Você controla contexto, regras e integrações direto
+              pelo frontend — com mínimos arquivos de ambiente.
             </p>
-            <ul class="bullet-list">
-              <li>QR Code da sessão (<code>type: "qr"</code>).</li>
-              <li>Buffer de logs recentes (<code>type: "logs"</code>).</li>
-              <li>Status dos chats (<code>type: "status"</code> e <code>"status_one"</code>), indicando:
-                IA ON/OFF, cooldown humano, títulos, etc.</li>
-            </ul>
-            <pre><code>GET /events
-Accept: text/event-stream</code></pre>
-          </div>
-        </div>
 
-        <!-- /send-text -->
-        <div class="accordion-item">
-          <div class="accordion-header">
-            <div class="endpoint-title">
-              <span class="endpoint-name">/send-text</span>
-              <span style="font-size:0.72rem;color:var(--text-muted);">
-                Envia uma mensagem de texto para um chatId via WhatsApp
-              </span>
+            <div class="hero-actions">
+              <a
+                href="https://github.com/samuelvictorol/iano-whatsapp"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn primary"
+              >
+                Ver repositório no GitHub
+              </a>
+              <a href="#run" class="btn ghost">
+                Como rodar agora
+              </a>
             </div>
-            <span class="endpoint-method method-post">POST</span>
-            <div class="accordion-chevron">›</div>
-          </div>
-          <div class="accordion-body">
-            <p class="endpoint-desc">
-              Permite disparar uma mensagem de texto de forma manual ou por outros sistemas
-              integrados, usando o número/log do WhatsApp já conectado.
-            </p>
-            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem;">
-              Se um <code>DASH_TOKEN</code> estiver definido, é necessário enviá-lo no cabeçalho
-              <code>X-Token</code>.
-            </p>
-            <pre><code>POST /send-text
-X-Token: &lt;DASH_TOKEN opcional&gt;
-Content-Type: application/json
 
-{
-  "chatId": "5511999999999@c.us",
-  "text": "Olá, esta mensagem foi enviada pelo Iano Whatsapp!"
+            <ul class="hero-highlights">
+              <li>🤖 SDR de WhatsApp configurável via painel</li>
+              <li>🎧 Transcrição de áudio + visão para imagens</li>
+              <li>🌐 Webhooks e endpoints para acionar seus sistemas</li>
+              <li>📊 SSE para QR-Code e logs em tempo real</li>
+            </ul>
+          </div>
+
+          <div class="hero-card glass-card">
+            <div class="hero-card-header">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+              <span class="hero-card-title">Exemplo de payload</span>
+            </div>
+            <pre class="hero-code"><code>{
+  "mongoUri": "mongodb+srv://...",
+  "openai": {
+    "OPENAI_API_KEY": "sk-...",
+    "OPENAI_CHAT_MODEL": "gpt-4.1-mini"
+  },
+  "ai": {
+    "BOT_NAME": "IANO Bot",
+    "IA_CONTEXT_MAX_MINUTES": 5,
+    "HUMAN_HOLD_MS": 300000
+  }
 }</code></pre>
+            <p class="hero-card-footer">
+              Envie isso para <code>/start-session</code> e sua instância
+              do IANO WhatsApp está pronta para conversar.
+            </p>
           </div>
         </div>
+      </section>
 
-        <!-- /reset-session -->
-        <div class="accordion-item">
-          <div class="accordion-header">
-            <div class="endpoint-title">
-              <span class="endpoint-name">/reset-session</span>
-              <span style="font-size:0.72rem;color:var(--text-muted);">
-                Reseta a sessão do WhatsApp Web (LocalAuth)
-              </span>
+      <!-- SOBRE -->
+      <section id="about" class="section">
+        <div class="section-header">
+          <h2>O que é o IANO WhatsApp?</h2>
+          <p>
+            Um <strong>engine de automação</strong> focado em WhatsApp que
+            centraliza IA, histórico de conversas e integrações em um único
+            backend em Node.js — pronto para virar seu SaaS.
+          </p>
+        </div>
+
+        <div class="cards-grid">
+          <article class="feature-card glass-card">
+            <h3>Agente de IA plugável</h3>
+            <p>
+              Conecta ao WhatsApp Web via <code>whatsapp-web.js</code>, recebe
+              mensagens, gerencia cooldown humano e encaminha o contexto para a
+              OpenAI com regras de negócio configuráveis.
+            </p>
+            <ul>
+              <li>Contexto recente por chat armazenado em MongoDB</li>
+              <li>Tratamento de eco e duplicidade de mensagens</li>
+              <li>Prefixo de IA customizável (&quot;IANO&quot; / &quot;Bot&quot;)</li>
+            </ul>
+          </article>
+
+          <article class="feature-card glass-card">
+            <h3>Configuração 100% via frontend</h3>
+            <p>
+              Em vez de entupir o <code>.env</code>, você envia as configurações
+              da IA e da OpenAI pelo painel. Na prática, basta
+              <strong>renomear</strong> o arquivo
+              <code>.env.example</code> para <code>.env</code> e rodar.
+            </p>
+            <ul>
+              <li>Definição de contexto, regras e metadados via API</li>
+              <li>Fácil de multi-tenantar para vários clientes</li>
+              <li>Perfeito para SaaS de atendimento e SDR</li>
+            </ul>
+          </article>
+
+          <article class="feature-card glass-card">
+            <h3>Disparos em massa com mídia</h3>
+            <p>
+              Use os endpoints de disparo para enviar campanhas de texto,
+              imagem ou documentos para listas de contatos ou grupos salvos —
+              reaproveitando a mesma sessão do WhatsApp.
+            </p>
+            <ul>
+              <li><code>/send-bulk</code> com texto ou mídia por URL</li>
+              <li><code>/send-bulk-upload</code> com upload de arquivos</li>
+              <li>Suporte a grupos de contatos nomeados</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <!-- FLUXOS / MINDMAP -->
+      <section id="flows" class="section section-alt">
+        <div class="section-header">
+          <h2>Fluxo de mensagens e regras de negócio</h2>
+          <p>
+            Veja o caminho que cada mensagem percorre dentro do IANO WhatsApp —
+            da chegada no WhatsApp Web até a IA e os seus sistemas.
+          </p>
+        </div>
+
+        <div class="flows-layout">
+          <div class="flow-map glass-card">
+            <div class="flow-center">
+              <button
+                class="flow-node flow-node--main"
+                data-flow-id="overview" style="color: white;"
+              >
+                IANO<br />Engine
+              </button>
             </div>
-            <span class="endpoint-method method-post">POST</span>
-            <div class="accordion-chevron">›</div>
+
+            <div class="flow-ring">
+              <button class="flow-node" data-flow-id="entry">
+                Entrada<br />WhatsApp
+              </button>
+              <button class="flow-node" data-flow-id="queue">
+                Fila &amp;<br />Cooldown
+              </button>
+              <button class="flow-node" data-flow-id="ai">
+                IA OpenAI<br />Texto &amp; Visão
+              </button>
+              <button class="flow-node" data-flow-id="integrations">
+                Integrações<br />HTTP
+              </button>
+              <button class="flow-node" data-flow-id="campaigns">
+                Disparos<br />em massa
+              </button>
+              <button class="flow-node" data-flow-id="observability">
+                Logs &amp;<br />Monitoramento
+              </button>
+            </div>
           </div>
-          <div class="accordion-body">
-            <p class="endpoint-desc">
-              Usado para forçar um reset da sessão do WhatsApp (por exemplo, quando o QR Code expira
-              ou a sessão apresenta inconsistências).
+
+          <aside class="flow-details glass-card" id="flowDetails">
+            <h3 id="flowTitle">Visão geral do fluxo</h3>
+            <p id="flowDescription">
+              Clique em um dos nós ao lado para ver como o IANO WhatsApp trata
+              cada etapa do fluxo de mensagens.
             </p>
-            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem;">
-              Também respeita, se configurado, o cabeçalho <code>X-Token</code> com
-              <code>DASH_TOKEN</code>.
+            <ul id="flowList"></ul>
+          </aside>
+        </div>
+      </section>
+
+      <!-- DOCS / ENDPOINTS -->
+      <section id="docs" class="section">
+        <div class="section-header">
+          <h2>Endpoints principais da API</h2>
+          <p>
+            A API HTTP é simples e direta para integrar com qualquer backend ou
+            frontend. Abaixo um resumo dos endpoints mais usados.
+          </p>
+        </div>
+
+        <div class="cards-grid docs-grid">
+          <article class="doc-card glass-card">
+            <h3>POST /start-session</h3>
+            <p>Inicializa a sessão do IANO com MongoDB e OpenAI.</p>
+            <ul>
+              <li><code>mongoUri</code> &mdash; conexão do MongoDB</li>
+              <li><code>openai.OPENAI_API_KEY</code> &mdash; chave da OpenAI</li>
+              <li><code>ai.BOT_NAME</code>, contexto, regras, metadados etc.</li>
+            </ul>
+            <pre><code>POST /start-session
+Content-Type: application/json</code></pre>
+          </article>
+
+          <article class="doc-card glass-card">
+            <h3>POST /reset-session</h3>
+            <p>
+              Limpa a sessão do WhatsApp Web, forçando um novo QR-Code na UI
+              (útil quando troca de número ou sessão expira).
             </p>
-            <pre><code>POST /reset-session
-X-Token: &lt;DASH_TOKEN opcional&gt;</code></pre>
+            <pre><code>POST /reset-session</code></pre>
+          </article>
+
+          <article class="doc-card glass-card">
+            <h3>GET /events</h3>
+            <p>
+              Stream SSE com logs, status da conexão e QR-Code em base64 para
+              ser exibido no painel web.
+            </p>
+            <ul>
+              <li>Eventos: <code>log</code>, <code>qr</code>, <code>status</code></li>
+              <li>Perfeito para dashboards em tempo real</li>
+            </ul>
+          </article>
+
+          <article class="doc-card glass-card">
+            <h3>POST /send-text</h3>
+            <p>Envio de mensagem simples para um único contato.</p>
+            <pre><code>{
+  "chatId": "5599999999999@c.us",
+  "text": "Olá, tudo bem?"
+}</code></pre>
+          </article>
+
+          <article class="doc-card glass-card">
+            <h3>POST /send-bulk</h3>
+            <p>Disparo para vários contatos, com texto ou mídia por URL.</p>
+            <ul>
+              <li><code>contacts</code> &mdash; array de números</li>
+              <li><code>text</code> ou <code>mediaUrl</code> + <code>caption</code></li>
+            </ul>
+            <pre><code>{
+  "contacts": ["+5599999999999"],
+  "text": "Campanha de teste 🚀"
+}</code></pre>
+          </article>
+
+          <article class="doc-card glass-card">
+            <h3>POST /send-bulk-upload</h3>
+            <p>
+              Envio de campanhas com upload de arquivo (imagem, PDF, DOCX,
+              etc.). Usa <code>multipart/form-data</code>.
+            </p>
+            <pre><code>file: (arquivo)
+contacts: ["+55..."]
+caption: "Legenda opcional"</code></pre>
+          </article>
+
+          <article class="doc-card glass-card">
+            <h3>GET /token-usage</h3>
+            <p>
+              Retorna o consumo de tokens da OpenAI da instância atual, para
+              você acompanhar custos.
+            </p>
+            <pre><code>GET /token-usage?range=7d</code></pre>
+          </article>
+
+          <article class="doc-card glass-card">
+            <h3>GET /contact-groups</h3>
+            <h3 class="doc-sub">POST /contact-groups</h3>
+            <p>
+              Criação e listagem de grupos de contatos nomeados, para
+              facilitar disparos recorrentes pela UI.
+            </p>
+            <pre><code>{
+  "label": "Clientes VIP",
+  "contacts": [
+    { "name": "Samuel", "phone": "+5561..." }
+  ]
+}</code></pre>
+          </article>
+        </div>
+
+        <div class="section-footer-link">
+          <a
+            href="https://github.com/samuelvictorol/iano-whatsapp"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn outline"
+          >
+            Ver detalhes completos da API no GitHub
+          </a>
+        </div>
+      </section>
+
+      <!-- COMO RODAR -->
+      <section id="run" class="section section-alt">
+        <div class="section-header">
+          <h2>Como rodar localmente e via Docker</h2>
+          <p>
+            O projeto foi pensado para ser simples de subir: poucos comandos,
+            poucos envs e tudo o que é sensível configurado via painel.
+          </p>
+        </div>
+
+        <div class="run-grid">
+          <article class="run-card glass-card">
+            <h3>Rodar local (API Node.js)</h3>
+            <ol>
+              <li>Tenha Node.js 18+ instalado.</li>
+              <li>Clone o repositório:</li>
+            </ol>
+            <pre id="cmd-git"><code>git clone https://github.com/samuelvictorol/iano-whatsapp.git
+cd iano-whatsapp</code></pre>
+            <ol start="3">
+              <li>Copie o arquivo de exemplo de ambiente:</li>
+            </ol>
+            <pre><code>cp .env.example .env</code></pre>
+            <p class="note">
+              Você não precisa mudar nada nesse arquivo para começar.
+              Porta, token de dashboard e TTL de mensagens já vêm prontos.
+            </p>
+            <ol start="4">
+              <li>Instale as dependências e suba o backend:</li>
+            </ol>
+            <pre><code>npm install
+node server.js</code></pre>
+            <p class="note">
+              Depois é só abrir o painel (frontend) configurado no projeto
+              para chamar <code>/start-session</code>, ler o QR-Code e
+              começar a conversar.
+            </p>
+          </article>
+
+          <article class="run-card glass-card">
+            <h3>Rodar com Docker</h3>
+            <p>
+              Se preferir encapsular tudo, use o
+              <code>docker-compose.yml</code> do repositório. Ele foi pensado
+              para subir o backend e, se configurado, o frontend que fala com a
+              API.
+            </p>
+            <ol>
+              <li>Copie o arquivo de ambiente:</li>
+            </ol>
+            <pre><code>cp .env.example .env</code></pre>
+            <ol start="2">
+              <li>Suba os serviços:</li>
+            </ol>
+            <pre><code>docker compose up -d --build</code></pre>
+            <p class="note">
+              Com isso, você terá o IANO WhatsApp rodando em containers
+              prontos para receber o QR-Code, disparar campanhas e integrar
+              com seus sistemas.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- STACK -->
+      <section id="stack" class="section">
+        <div class="section-header">
+          <h2>Stack, frameworks e dependências</h2>
+          <p>
+            Uma stack moderna, mas enxuta, focada em produtividade e fácil
+            manutenção.
+          </p>
+        </div>
+
+        <div class="stack-grid">
+          <div class="stack-column glass-card">
+            <h3>Backend</h3>
+            <ul>
+              <li>Node.js + Express</li>
+              <li><code>whatsapp-web.js</code> para integração com WhatsApp</li>
+              <li>MongoDB como armazenamento de mensagens e contexto</li>
+              <li>OpenAI Chat + Whisper para IA de texto e áudio</li>
+              <li><code>multer</code> para upload de arquivos</li>
+              <li>Server-Sent Events (SSE) para logs e QR em tempo real</li>
+            </ul>
+          </div>
+          <div class="stack-column glass-card">
+            <h3>Frontend / Painel</h3>
+            <ul>
+              <li>Vue 3 + Quasar Framework (painel de controle)</li>
+              <li>UX focada em <em>configurar sem mexer em código</em></li>
+              <li>Disparos em massa com UI tipo “mini Swagger”</li>
+              <li>Monitoramento de sessão, QR-Code e filas</li>
+            </ul>
+          </div>
+          <div class="stack-column glass-card">
+            <h3>Dev &amp; Deploy</h3>
+            <ul>
+              <li>Docker / Docker Compose</li>
+              <li>Arquitetura preparada para Render / AWS / VPS</li>
+              <li>Configuração multi-tenant via Mongo + painéis distintos</li>
+              <li>Poucas variáveis de ambiente, foco no frontend</li>
+            </ul>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- TECNOLOGIAS E TÓPICOS DA MATÉRIA -->
-    <section id="stack">
-      <h2 class="section-title">
-        <span class="icon">🧩</span>
-        Tecnologias e tópicos da disciplina aplicados
-      </h2>
-      <p class="section-subtitle">
-        O projeto Iano Whatsapp nasce diretamente dos tópicos trabalhados em sala:
-        uso de prompts para prototipação, geração de código, I.A em fluxo real e
-        desenvolvimento de SPA responsiva.
-      </p>
-
-      <div class="glass-row">
-        <div class="glass-card">
-          <h3>Tecnologias utilizadas</h3>
-          <ul class="bullet-list">
-            <li>Docker Compose – orquestração do backend e demais serviços.</li>
-            <li>Node.js + Express – servidor HTTP e camada de API.</li>
-            <li>JavaScript (backend e frontend SPA).</li>
-            <li>Quasar Framework + Vue 3 – painel web responsivo e dinâmico.</li>
-            <li>OpenAI API – respostas da I.A e transcrição de áudio (Whisper).</li>
-            <li>whatsapp-web.js – integração com WhatsApp Web via QR Code.</li>
-            <li>MongoDB – armazenamento de mensagens, logs e (futuramente) configurações.</li>
-          </ul>
+      <!-- CONTATO -->
+      <section id="contact" class="section section-alt">
+        <div class="section-header">
+          <h2>Quem mantém a IanoWhatsapp?</h2>
+          <p>
+            Projeto criado e mantido por
+            <strong>Samuel Victor Oliveira Lima</strong> - Founder da AITOSOFTWARES, desenvolvedor, especialista em automação e IA aplicada a negócios.
+          </p>
         </div>
 
-        <div class="glass-card">
-          <h3>Tópicos da matéria utilizados</h3>
-          <ul class="bullet-list">
-            <li>
-              Geração de protótipo inicial a partir de prompts, incluindo a arquitetura
-              inspirada em outro protótipo (WhatsApp Logger) também produzido com GPT.
-            </li>
-            <li>
-              Geração de endpoints e lógica de negócio em Node.js via prompts bem definidos.
-            </li>
-            <li>
-              Criação de telas SPA responsivas (Quasar + Vue 3) para painel, logs e QR Code.
-            </li>
-            <li>
-              Conceitos de fluxo enxuto (TO-BE), robustez, controle e sustentabilidade
-              aplicados a um caso de uso de tribunal fictício.
-            </li>
-          </ul>
+        <div class="contact-grid">
+          <div class="glass-card contact-card">
+            <h3>Contato</h3>
+            <ul>
+              <li>
+                🌐
+                <a href="https://samuelvictorol.github.io/portfolio/" target="_blank">
+                Samuel Victor - Portfólio
+                </a>
+              </li>
+              <li>
+                ✉️
+                <a href="mailto:samuel.softdev@outlook.com">
+                  samuel.softdev@outlook.com
+                </a>
+              </li>
+              <li>
+                💻
+                <a
+                  href="https://github.com/samuelvictorol"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  github.com/samuelvictorol
+                </a>
+              </li>
+              <li>
+                📱 Ideal para: agências, produtoras, lojas, clínicas e qualquer
+                operação que viva de atendimento via WhatsApp.
+              </li>
+            </ul>
+          </div>
+
+          <div class="glass-card contact-card contact-note">
+            <p>
+              Pronto para transformar seu WhatsApp em um
+              <strong>canal de vendas automatizado</strong>,
+              com IA que responde, escuta e executa ações?
+            </p>
+            <p>
+              Use o repositório, adapte para seu contexto e, se quiser,
+              evolua para um SaaS de atendentes virtuais próprios.
+            </p>
+          </div>
         </div>
-      </div>
-    </section>
-  </main>
+      </section>
+    </main>
 
-  <footer>
-    Projeto Iano Whatsapp – Programa de Residência em TI – UFG &amp; TJGO.<br />
-    Backlog e Kanban: <a href="https://github.com/users/samuelvictorol/projects/6" target="_blank" rel="noreferrer">GitHub Projects</a> ·
-    Código fonte: <a href="https://github.com/samuelvictorol/iano-whatsapp" target="_blank" rel="noreferrer">github.com/samuelvictorol/iano-whatsapp</a>
-  </footer>
+    <footer class="footer">
+      <span>IANO WhatsApp · Open Source · {{year}}</span>
+      <a
+        href="https://github.com/samuelvictorol/iano-whatsapp"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Ver código no GitHub
+      </a>
+    </footer>
 
-  <script>
-    // Smooth scroll for nav/buttons
-    function smoothScrollTo(target) {
-      const el = document.querySelector(target);
-      if (!el) return;
-      const y = el.getBoundingClientRect().top + window.scrollY - 80;
-      window.scrollTo({ top: y, behavior: 'smooth' });
-    }
-
-    document.querySelectorAll("[data-scroll]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const target = btn.getAttribute("data-scroll");
-        if (target) smoothScrollTo(target);
-      });
-    });
-
-    // Tabs (Hoje x Futuro)
-    const tabButtons = document.querySelectorAll(".tab-button");
-    const tabPanels = document.querySelectorAll(".tab-panel");
-
-    tabButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const tab = btn.getAttribute("data-tab");
-        tabButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        tabPanels.forEach((panel) => {
-          if (panel.id === "tab-" + tab) {
-            panel.classList.add("active");
-          } else {
-            panel.classList.remove("active");
-          }
-        });
-      });
-    });
-
-    // Accordion for endpoints
-    document.querySelectorAll(".accordion-header").forEach((header) => {
-      header.addEventListener("click", () => {
-        const item = header.closest(".accordion-item");
-        const isOpen = item.classList.contains("open");
-        document
-          .querySelectorAll(".accordion-item.open")
-          .forEach((i) => i.classList.remove("open"));
-        if (!isOpen) item.classList.add("open");
-      });
-    });
-
-    // Small initial animation on load
-    window.addEventListener("load", () => {
-      document.body.classList.add("loaded");
-    });
-  </script>
-</body>
+    <script src="main.js"></script>
+  </body>
 </html>
