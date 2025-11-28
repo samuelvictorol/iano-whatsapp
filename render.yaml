@@ -1,58 +1,33 @@
 services:
-  # ===========================
-  # 1) Backend - WhatsApp + IA
-  # ===========================
+  # ============================
+  # BACKEND (Node + WhatsApp)
+  # ============================
   - type: web
-    name: iano-whatsapp-api
-    env: docker            # usa o Dockerfile da raiz
-    plan: free
-
+    name: iano-whatsapp-backend
+    env: docker
+    plan: free               # aqui pode usar free normalmente
     dockerfilePath: ./Dockerfile
-
+    dockerContext: .
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: PORT
         value: "10000"
-
-      # TTL opcional das mensagens no Mongo (0 = sem expirar)
-      - key: MSG_TTL_DAYS
-        value: "0"
-
-      # ID da sessão do WhatsApp
-      - key: WWEBJS_CLIENT_ID
-        value: "whatsapp-bot"
-
-      # Diretórios de sessão/mídia dentro do container
-      - key: WWEBJS_STORE
-        value: "/app/data/wwebjs"
-      - key: MEDIA_DIR
-        value: "/app/data/media"
-
-      # Puppeteer/Chromium (já configurado no Dockerfile)
-      - key: PUPPETEER_EXECUTABLE_PATH
-        value: "/usr/bin/chromium"
       - key: PUPPETEER_SKIP_DOWNLOAD
         value: "true"
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: "/usr/bin/chromium"
 
-      # Token opcional pra proteger o painel/API
-      - key: DASH_TOKEN
-        generateValue: true
-
-
-  # ===========================
-  # 2) Frontend - Quasar SPA
-  # ===========================
+  # ============================
+  # FRONTEND (Quasar SPA estático)
+  # ============================
   - type: web
     name: iano-whatsapp-frontend
-    env: static            # site estático
-    plan: free
-
-    # diz que o projeto desse serviço está em ./frontend
-    rootDir: frontend
-
-    # comando de build do Quasar (a partir de ./frontend)
-    buildCommand: |
-      npm install
+    env: static              # site estático
+    # ⚠️ NÃO usar plan aqui (nem region)
+    buildCommand: >
+      cd frontend &&
+      npm install &&
       npm run build
-
-    # pasta que o Quasar gera (dentro de ./frontend)
-    staticPublishPath: dist/spa
+    staticPublishPath: frontend/dist/spa
+    # se teu build gera em outro lugar (ex: dist), ajusta esse caminho
