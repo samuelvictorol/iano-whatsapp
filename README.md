@@ -4,7 +4,7 @@ Crie sua própria I.A para WhatsApp
 
 > Configure a persona da sua I.A, objetivos, metadatas, produtos, conecte seu WhatsApp via QR Code, Veja tudo em tempo real num painel com interface amigável. Controle quando a IA fala ou o humano assume.
 
-> [🌐 Documentação](iano-whatsapp-frontend.onrender.com/) •
+> [🌐 Documentação](https://iano-whatsapp-frontend.onrender.com) •
 > [⚙️ Backlog e Kanban](https://github.com/users/samuelvictorol/projects/6) •
 
 <img width="1199" height="479" alt="image" src="https://github.com/user-attachments/assets/c77d6e90-a6a0-48eb-92db-c4297eb0b324" />
