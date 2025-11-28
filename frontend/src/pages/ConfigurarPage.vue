@@ -7,58 +7,94 @@
       <div class="q-mb-lg">
         <div class="row items-center justify-between q-gutter-sm q-pt-md">
 
-          <div class="">
+          <div>
             <div class="text-h5 text-weight-bold text-white q-mb-xs">
               Configurações
             </div>
-            <!-- <div class="text-subtitle2 text-grey-7">
-              Ajuste as chaves da OpenAI, conexão com banco, regras da IA e os dados que ela vai usar.
-            </div> -->
 
-            <div class=" text-grey q-my-sm">
+            <div class="text-grey q-my-sm">
               <span v-if="!sessionStartedOnce">
                 Preencha as configurações obrigatórias de <strong>OpenAI & Mongo</strong> e depois clique em
-                <strong>Iniciar sessão</strong>.
+                <strong>Resetar sessão</strong> para iniciar o bot.
               </span>
               <span v-else-if="hasPendingChanges">
-                🟡 Detectamos mudanças nas configurações. Clique em <strong>Aplicar mudanças</strong> para
-                reiniciar a sessão e escaneie o QR Code novamete.
+                🟡 Detectamos mudanças nas configurações. Clique em <strong>Resetar sessão</strong> para aplicar as
+                mudanças e escanear o QR Code novamente.
               </span>
               <span v-else>
-                🟢 Sessão iniciada.
+                🟢 Sessão ativa. Se precisar, clique em <strong>Resetar sessão</strong> para reiniciar o bot.
               </span>
             </div>
           </div>
 
           <div class="row items-center">
             <!-- Ações de importar/exportar JSON -->
-            <div class="row items-center justify-start">
-              <q-btn dense outlined icon="upload" label="Exportar" class="q-mr-sm text-primary bg-white text-bold"  glossy
-                @click="exportConfigToFile" />
-              <q-btn dense outlined  icon="download" class="text-primary bg-white text-bold" glossy label="Importar" @click="triggerImport"/>
-              <input ref="fileInput" type="file" accept="application/json" class="hidden" @change="handleFileChange" />
+            <div class="row items-center justify-start">              
+              <q-btn
+                dense
+                outlined
+                icon="download"
+                class="text-primary bg-white text-bold"
+                glossy
+                label="Importar"
+                @click="triggerImport"
+              />
+              <input
+                ref="fileInput"
+                type="file"
+                accept="application/json"
+                class="hidden"
+                @change="handleFileChange"
+              />
+              <q-btn
+                dense
+                outlined
+                icon="upload"
+                label="Exportar"
+                class="q-ml-sm text-primary bg-white text-bold"
+                glossy
+                @click="exportConfigToFile"
+              />
+
             </div>
           </div>
+
           <div class="w100 row justify-end q-pt-md">
-            <!-- Botão principal: iniciar / aplicar mudanças / sessão ativa -->
-            <q-btn :color="mainActionColor" glossy
-              :icon-right="hasPendingChanges ? 'published_with_changes' : 'play_arrow'" :label="mainActionLabel"
-              :loading="startSessionLoading" :disable="!canClickMainAction || startSessionLoading" class="q-pa-md"
-              @click="startSession" />
+            <!-- Botão principal: sempre "Resetar sessão" -->
+            <q-btn
+              :color="mainActionColor"
+              glossy
+              icon-right="mdi-play-speed  "
+              :label="mainActionLabel"
+              :loading="startSessionLoading"
+              :disable="!canClickMainAction || startSessionLoading"
+              class="q-pa-md"
+              @click="startSession"
+            />
           </div>
         </div>
       </div>
 
       <!-- CARD: API -->
       <q-card class="q-mb-md shadow section-card">
-        <q-expansion-item v-model="apiExpanded" dense-toggle expand-separator :header-class="[
-          'expansion-header',
-          isOpenAIMongoComplete ? 'expansion-header--ok' : 'expansion-header--warn'
-        ]" expand-icon="expand_more">
+        <q-expansion-item
+          v-model="apiExpanded"
+          dense-toggle
+          expand-separator
+          :header-class="[
+            'expansion-header',
+            isOpenAIMongoComplete ? 'expansion-header--ok' : 'expansion-header--warn'
+          ]"
+          expand-icon="expand_more"
+        >
           <!-- HEADER CUSTOM, sem ícone duplicado -->
           <template #header>
             <q-item-section avatar>
-              <q-avatar size="32px" :color="isOpenAIMongoComplete ? 'green-14' : 'amber'" text-color="black">
+              <q-avatar
+                size="32px"
+                :color="isOpenAIMongoComplete ? 'green-14' : 'amber'"
+                text-color="black"
+              >
                 <q-icon name="vpn_key" />
               </q-avatar>
             </q-item-section>
@@ -73,10 +109,23 @@
             </q-item-section>
 
             <q-item-section side>
-              <q-chip v-if="isOpenAIMongoComplete" dense color="green-14" text-color="white" icon="check_circle">
+              <q-chip
+                v-if="isOpenAIMongoComplete"
+                dense
+                color="green-14"
+                text-color="white"
+                icon="check_circle"
+              >
                 Pronto
               </q-chip>
-              <q-chip v-else dense outline color="amber-5" text-color="amber-1" icon="priority_high">
+              <q-chip
+                v-else
+                dense
+                outline
+                color="amber-5"
+                text-color="amber-1"
+                icon="priority_high"
+              >
                 Obrigatório
               </q-chip>
             </q-item-section>
@@ -84,10 +133,15 @@
 
           <q-card-section>
             <q-form class="q-gutter-md" @submit="saveOpenAIConfig">
-
               <!-- OPENAI_API_KEY -->
-              <q-input class="bg-grey rounded-borders" v-model="openaiApiKey" label="OPENAI API KEY" type="password"
-                outlined dense>
+              <q-input
+                class="bg-grey rounded-borders"
+                v-model="openaiApiKey"
+                label="OPENAI API KEY"
+                type="password"
+                outlined
+                dense
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -98,8 +152,16 @@
               </q-input>
 
               <!-- OPENAI_CHAT_MODEL (q-select) -->
-              <q-select v-model="openaiChatModel" label="OPENAI CHAT MODEL" outlined dense
-                class="bg-grey rounded-borders" :options="openaiModelOptions" emit-value map-options>
+              <q-select
+                v-model="openaiChatModel"
+                label="OPENAI CHAT MODEL"
+                outlined
+                dense
+                class="bg-grey rounded-borders"
+                :options="openaiModelOptions"
+                emit-value
+                map-options
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -110,8 +172,17 @@
               </q-select>
 
               <!-- OPENAI_TEMPERATURE -->
-              <q-input class="bg-grey rounded-borders" v-model.number="openaiTemperature" type="number"
-                label="OPENAI TEMPERATURE" outlined dense :min="0" :max="2" step="0.1">
+              <q-input
+                class="bg-grey rounded-borders"
+                v-model.number="openaiTemperature"
+                type="number"
+                label="OPENAI TEMPERATURE"
+                outlined
+                dense
+                :min="0"
+                :max="2"
+                step="0.1"
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -122,8 +193,15 @@
               </q-input>
 
               <!-- OPENAI_MAX_TOKENS -->
-              <q-input class="bg-grey rounded-borders" v-model.number="openaiMaxTokens" type="number"
-                label="OPENAI MAX TOKENS" outlined dense :min="1">
+              <q-input
+                class="bg-grey rounded-borders"
+                v-model.number="openaiMaxTokens"
+                type="number"
+                label="OPENAI MAX TOKENS"
+                outlined
+                dense
+                :min="1"
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -134,8 +212,16 @@
               </q-input>
 
               <!-- TRANSCRIBE_MODEL (q-select) -->
-              <q-select v-model="openaiTranscribeModel" label="TRANSCRIBE MODEL" outlined
-                class="bg-grey rounded-borders" dense :options="openaiTranscribeOptions" emit-value map-options>
+              <q-select
+                v-model="openaiTranscribeModel"
+                label="TRANSCRIBE MODEL"
+                outlined
+                class="bg-grey rounded-borders"
+                dense
+                :options="openaiTranscribeOptions"
+                emit-value
+                map-options
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -146,8 +232,13 @@
               </q-select>
 
               <!-- MONGO_CONNECTION_STRING -->
-              <q-input class="bg-grey rounded-borders" v-model="mongoConnectionString" label="MONGO CONNECTION STRING"
-                outlined dense>
+              <q-input
+                class="bg-grey rounded-borders"
+                v-model="mongoConnectionString"
+                label="MONGO CONNECTION STRING"
+                outlined
+                dense
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -159,7 +250,7 @@
 
               <div class="row justify-end q-gutter-sm q-mt-md">
                 <q-btn flat color="grey" icon="restore" label="Resetar" @click="resetOpenAIConfig" />
-                <q-btn class="bg-positive text-white" icon-right="save" label="Salvar"  type="submit" />
+                <q-btn class="bg-positive text-white" icon-right="save" label="Salvar" type="submit" />
               </div>
             </q-form>
           </q-card-section>
@@ -168,10 +259,16 @@
 
       <!-- CARD: Configurações da IA -->
       <q-card class="q-mb-md shadow section-card">
-        <q-expansion-item v-model="aiExpanded" dense-toggle expand-separator :header-class="[
-          'expansion-header',
-          isAIConfigComplete ? 'expansion-header--ok' : 'expansion-header--neutral'
-        ]" expand-icon="expand_more">
+        <q-expansion-item
+          v-model="aiExpanded"
+          dense-toggle
+          expand-separator
+          :header-class="[
+            'expansion-header',
+            isAIConfigComplete ? 'expansion-header--ok' : 'expansion-header--neutral'
+          ]"
+          expand-icon="expand_more"
+        >
           <template #header>
             <q-item-section avatar>
               <q-avatar size="32px" color="green-14" text-color="primary">
@@ -189,10 +286,23 @@
             </q-item-section>
 
             <q-item-section side>
-              <q-chip v-if="isAIConfigComplete" dense color="green-14" text-color="white" icon="check_circle">
+              <q-chip
+                v-if="isAIConfigComplete"
+                dense
+                color="green-14"
+                text-color="white"
+                icon="check_circle"
+              >
                 Pronto
               </q-chip>
-              <q-chip v-else dense outline color="grey" text-color="grey" icon="settings_suggest">
+              <q-chip
+                v-else
+                dense
+                outline
+                color="grey"
+                text-color="grey"
+                icon="settings_suggest"
+              >
                 Opcional
               </q-chip>
             </q-item-section>
@@ -200,9 +310,14 @@
 
           <q-card-section>
             <q-form class="q-gutter-md" @submit="saveAIConfig">
-
               <!-- BOT_NAME -->
-              <q-input class="bg-grey rounded-borders" v-model="botName" label="Nome do Bot" outlined dense>
+              <q-input
+                class="bg-grey rounded-borders"
+                v-model="botName"
+                label="Nome do Bot"
+                outlined
+                dense
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -213,8 +328,15 @@
               </q-input>
 
               <!-- IA_CONTEXT_MAX_MINUTES -->
-              <q-input class="bg-grey rounded-borders" v-model.number="iaContextMinutes" type="number"
-                label="Tempo de Consideração" outlined dense :min="0">
+              <q-input
+                class="bg-grey rounded-borders"
+                v-model.number="iaContextMinutes"
+                type="number"
+                label="Tempo de Consideração"
+                outlined
+                dense
+                :min="0"
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -226,8 +348,15 @@
               </q-input>
 
               <!-- HUMAN_HOLD_MS -->
-              <q-input class="bg-grey rounded-borders" v-model.number="humanHoldMs" type="number"
-                label="Tempo Intervenção Humana (ms)" outlined dense :min="0">
+              <q-input
+                class="bg-grey rounded-borders"
+                v-model.number="humanHoldMs"
+                type="number"
+                label="Tempo Intervenção Humana (ms)"
+                outlined
+                dense
+                :min="0"
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -239,8 +368,14 @@
               </q-input>
 
               <!-- Contexto da IA -->
-              <q-input class="bg-grey rounded-borders" v-model="aiContext" type="textarea" autogrow outlined
-                label="Contexto da IA (papel / persona)">
+              <q-input
+                class="bg-grey rounded-borders"
+                v-model="aiContext"
+                type="textarea"
+                autogrow
+                outlined
+                label="Contexto da IA (papel / persona)"
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -251,8 +386,14 @@
               </q-input>
 
               <!-- Regras da IA -->
-              <q-input class="bg-grey rounded-borders" v-model="aiRules" type="textarea" autogrow outlined
-                label="Regras da IA (prompt / instruções)">
+              <q-input
+                class="bg-grey rounded-borders"
+                v-model="aiRules"
+                type="textarea"
+                autogrow
+                outlined
+                label="Regras da IA (prompt / instruções)"
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -263,8 +404,14 @@
               </q-input>
 
               <!-- Metadata -->
-              <q-input class="bg-grey rounded-borders" v-model="aiMetadata" type="textarea" autogrow outlined
-                label="Metadata (observações extras para o prompt)">
+              <q-input
+                class="bg-grey rounded-borders"
+                v-model="aiMetadata"
+                type="textarea"
+                autogrow
+                outlined
+                label="Metadata (observações extras para o prompt)"
+              >
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
@@ -286,10 +433,16 @@
 
       <!-- CARD: Dados para a IA (catálogo etc.) -->
       <q-card class="q-mb-md shadow section-card">
-        <q-expansion-item v-model="dataExpanded" dense-toggle expand-separator :header-class="[
-          'expansion-header',
-          hasDataItems ? 'expansion-header--ok' : 'expansion-header--neutral'
-        ]" expand-icon="expand_more">
+        <q-expansion-item
+          v-model="dataExpanded"
+          dense-toggle
+          expand-separator
+          :header-class="[
+            'expansion-header',
+            hasDataItems ? 'expansion-header--ok' : 'expansion-header--neutral'
+          ]"
+          expand-icon="expand_more"
+        >
           <template #header>
             <q-item-section avatar>
               <q-avatar size="32px" color="green-14" text-color="primary">
@@ -307,10 +460,23 @@
             </q-item-section>
 
             <q-item-section side>
-              <q-chip v-if="hasDataItems" dense color="green" text-color="white" icon="check_circle">
+              <q-chip
+                v-if="hasDataItems"
+                dense
+                color="green"
+                text-color="white"
+                icon="check_circle"
+              >
                 {{ dataItems.length }} item(s)
               </q-chip>
-              <q-chip v-else dense outline color="grey" text-color="grey" icon="info">
+              <q-chip
+                v-else
+                dense
+                outline
+                color="grey"
+                text-color="grey"
+                icon="info"
+              >
                 Opcional
               </q-chip>
             </q-item-section>
@@ -318,11 +484,16 @@
 
           <q-card-section>
             <q-form class="q-gutter-md" @submit="addDataItem">
-
               <div class="row q-col-gutter-sm">
                 <div class="col-12 col-md-6">
                   <!-- Título -->
-                  <q-input class="bg-grey rounded-borders" v-model="newItem.title" label="Título" outlined dense>
+                  <q-input
+                    class="bg-grey rounded-borders"
+                    v-model="newItem.title"
+                    label="Título"
+                    outlined
+                    dense
+                  >
                     <template #append>
                       <q-icon name="help_outline" class="cursor-pointer">
                         <q-tooltip>
@@ -335,8 +506,13 @@
 
                 <div class="col-12 col-md-6">
                   <!-- Categoria -->
-                  <q-input class="bg-grey rounded-borders" v-model="newItem.category" label="Categoria" outlined
-                    dense>
+                  <q-input
+                    class="bg-grey rounded-borders"
+                    v-model="newItem.category"
+                    label="Categoria"
+                    outlined
+                    dense
+                  >
                     <template #append>
                       <q-icon name="help_outline" class="cursor-pointer">
                         <q-tooltip>
@@ -349,8 +525,14 @@
 
                 <div class="col-12">
                   <!-- Descrição -->
-                  <q-input class="bg-grey rounded-borders" v-model="newItem.description" type="textarea" autogrow
-                    label="Descrição" outlined>
+                  <q-input
+                    class="bg-grey rounded-borders"
+                    v-model="newItem.description"
+                    type="textarea"
+                    autogrow
+                    label="Descrição"
+                    outlined
+                  >
                     <template #append>
                       <q-icon name="help_outline" class="cursor-pointer">
                         <q-tooltip>
@@ -364,17 +546,31 @@
                 <!-- Imagens como array de inputs -->
                 <div class="col-12 col-md-6">
                   <div class="row items-center justify-between q-mb-xs">
-                    <q-btn dense class="q-mx-xs text-secondary bg-blue text-white" icon="add_photo_alternate"
-                      label="Adicionar imagem" @click="addImageInput" />
+                    <q-btn
+                      dense
+                      class="q-mx-xs text-secondary bg-blue text-white"
+                      icon="add_photo_alternate"
+                      label="Adicionar imagem"
+                      @click="addImageInput"
+                    />
                     <div class="text-caption text-grey-6 q-mr-sm">
                       Imagens
                     </div>
                   </div>
 
-                  <div v-for="(img, idx) in newItem.images" :key="idx" class="row items-center q-mb-xs no-wrap">
+                  <div
+                    v-for="(img, idx) in newItem.images"
+                    :key="idx"
+                    class="row items-center q-mb-xs no-wrap"
+                  >
                     <div class="col">
-                      <q-input class="bg-grey rounded-borders" v-model="newItem.images[idx]"
-                        :label="`Imagem ${idx + 1} (URL)`" outlined dense>
+                      <q-input
+                        class="bg-grey rounded-borders"
+                        v-model="newItem.images[idx]"
+                        :label="`Imagem ${idx + 1} (URL)`"
+                        outlined
+                        dense
+                      >
                         <template #append>
                           <q-icon name="help_outline" class="cursor-pointer">
                             <q-tooltip>
@@ -386,8 +582,15 @@
                     </div>
 
                     <div class="q-ml-xs">
-                      <q-btn v-if="newItem.images.length > 1" dense flat round icon="delete" color="amber-5"
-                        @click="removeImageInput(idx)" />
+                      <q-btn
+                        v-if="newItem.images.length > 1"
+                        dense
+                        flat
+                        round
+                        icon="delete"
+                        color="amber-5"
+                        @click="removeImageInput(idx)"
+                      />
                     </div>
                   </div>
 
@@ -396,14 +599,27 @@
                     <div class="text-caption text-grey-5 q-mb-xs">
                       Prévia da primeira imagem
                     </div>
-                    <q-img :src="previewImages[0]" class="rounded-borders" style="max-width: 220px" :ratio="16 / 9" />
+                    <q-img
+                      :src="previewImages[0]"
+                      class="rounded-borders"
+                      style="max-width: 220px"
+                      :ratio="16 / 9"
+                    />
                   </div>
                 </div>
 
                 <div class="col-6 col-md-3">
                   <!-- Preço -->
-                  <q-input class="bg-grey rounded-borders" v-model.number="newItem.price" type="number" outlined dense
-                    label="Preço (R$)" min="0" step="0.01">
+                  <q-input
+                    class="bg-grey rounded-borders"
+                    v-model.number="newItem.price"
+                    type="number"
+                    outlined
+                    dense
+                    label="Preço (R$)"
+                    min="0"
+                    step="0.01"
+                  >
                     <template #append>
                       <q-icon name="help_outline" class="cursor-pointer">
                         <q-tooltip>
@@ -416,8 +632,16 @@
 
                 <div class="col-6 col-md-3">
                   <!-- Preço promocional -->
-                  <q-input class="bg-grey rounded-borders" v-model.number="newItem.promoPrice" type="number" outlined
-                    dense label="Preço promocional (R$)" min="0" step="0.01">
+                  <q-input
+                    class="bg-grey rounded-borders"
+                    v-model.number="newItem.promoPrice"
+                    type="number"
+                    outlined
+                    dense
+                    label="Preço promocional (R$)"
+                    min="0"
+                    step="0.01"
+                  >
                     <template #append>
                       <q-icon name="help_outline" class="cursor-pointer">
                         <q-tooltip>
@@ -430,7 +654,13 @@
               </div>
 
               <div class="row justify-end q-gutter-sm q-mt-md">
-                <q-btn flat color="grey" icon="delete_sweep" label="Limpar itens" @click="clearDataItems" />
+                <q-btn
+                  flat
+                  color="grey"
+                  icon="delete_sweep"
+                  label="Limpar itens"
+                  @click="clearDataItems"
+                />
                 <q-btn class="bg-positive text-white" icon-right="save" label="Salvar" type="submit" />
               </div>
             </q-form>
@@ -441,9 +671,19 @@
                 Itens cadastrados
               </div>
               <q-list bordered separator class="rounded-borders">
-                <q-item v-for="(item, index) in dataItems" :key="index" clickable class="text-teal">
-                  <q-img :src="normalizedImages(item)[index]" :alt="item.title || 'Prévia'" class="rounded-borders q-mr-sm"
-                    width="80px" height="80px" />
+                <q-item
+                  v-for="(item, index) in dataItems"
+                  :key="index"
+                  clickable
+                  class="text-teal"
+                >
+                  <q-img
+                    :src="normalizedImages(item)[index]"
+                    :alt="item.title || 'Prévia'"
+                    class="rounded-borders q-mr-sm"
+                    width="80px"
+                    height="80px"
+                  />
                   <q-item-section>
                     <q-item-label class="text-weight-medium">
                       {{ item.title || 'Sem título' }}
@@ -451,32 +691,24 @@
                     <q-item-label caption class="text-grey-3">
                       {{ item.description || 'Sem descrição' }}
                     </q-item-label>
-                    <q-item-label caption class="q-mt-xs  text-amber">
+                    <q-item-label caption class="q-mt-xs text-amber">
                       <span v-if="item.category">Categoria: {{ item.category }} • </span>
                       <span v-if="item.price">Preço: R$ {{ Number(item.price).toFixed(2) }}</span>
                       <span v-if="item.promoPrice">
                         &nbsp;| Promo: R$ {{ Number(item.promoPrice).toFixed(2) }}
                       </span>
                     </q-item-label>
-
-                    <!-- Carrossel de imagens + prévia -->
-                    <!-- <div v-if="normalizedImages(item).length" class="q-mt-sm">
-                        <q-carousel swipeable animated infinite navigation arrows height="200px" class="rounded-borders">
-                          <q-carousel-slide v-for="(src, imgIdx) in normalizedImages(item)" :key="imgIdx" :name="imgIdx">
-                            <q-img :src="src" :alt="item.title || `Imagem ${imgIdx + 1}`" class="fit rounded-borders"
-                              :ratio="16 / 9" />
-                          </q-carousel-slide>
-                        </q-carousel>
-
-                      <div class="q-mt-sm">
-                        <q-img :src="normalizedImages(item)[0]" :alt="item.title || 'Prévia'" class="rounded-borders"
-                          style="max-width: 180px" :ratio="16 / 9" />
-                      </div>
-                    </div> -->
                   </q-item-section>
 
                   <q-item-section side top>
-                    <q-btn dense flat round icon="delete" color="negative" @click.stop="removeDataItem(index)" />
+                    <q-btn
+                      dense
+                      flat
+                      round
+                      icon="delete"
+                      color="negative"
+                      @click.stop="removeDataItem(index)"
+                    />
                   </q-item-section>
                 </q-item>
               </q-list>
@@ -496,7 +728,8 @@ import { api } from 'boot/axios';
 import { useRouter } from 'vue-router';
 
 const $q = useQuasar();
-const router = useRouter()
+const router = useRouter();
+
 const STORAGE_KEYS = {
   openai: 'config_openai',
   ai: 'config_ai_settings',
@@ -530,7 +763,6 @@ const openaiModelOptions = [
 // Opções de modelos de transcrição
 const openaiTranscribeOptions = [
   { label: 'whisper-1 (padrão)', value: 'whisper-1' }
-  // Deixar flexível pra você adicionar outros depois
 ];
 
 // --- FORM 1: OpenAI + Mongo ---
@@ -624,23 +856,18 @@ const hasPendingChanges = computed(() => {
   return current !== lastAppliedConfig.value;
 });
 
-// Estado do botão principal
-const mainActionLabel = computed(() => {
-  if (!sessionStartedOnce.value) return 'Iniciar sessão';
-  if (hasPendingChanges.value) return 'Aplicar mudanças';
-  return 'Sessão ativa';
-});
+// Estado do botão principal (sempre "Resetar sessão", mas com cores diferentes)
+const mainActionLabel = computed(() => 'Resetar sessão');
 
 const mainActionColor = computed(() => {
-  if (!sessionStartedOnce.value) return 'green-14';
-  if (hasPendingChanges.value) return 'orange-5';
-  return 'grey-7';
+  if (!isRequiredConfigFilled.value) return 'grey-7';
+  if (!sessionStartedOnce.value) return 'green-14';   // primeira vez
+  if (hasPendingChanges.value) return 'orange-5';    // tem mudança pendente
+  return 'green-14';                                 // sessão ativa, mas reset sempre possível
 });
 
 const canClickMainAction = computed(() => {
-  if (!isRequiredConfigFilled.value) return false;
-  if (!sessionStartedOnce.value) return true;
-  return hasPendingChanges.value;
+  return isRequiredConfigFilled.value;
 });
 
 // --------- LOCALSTORAGE: salvar configs individuais ---------
@@ -655,10 +882,19 @@ const saveOpenAIConfig = () => {
       MONGO_CONNECTION_STRING: mongoConnectionString.value
     };
     localStorage.setItem(STORAGE_KEYS.openai, JSON.stringify(payload));
-    $q.notify({ color: 'green', icon: 'save', position: 'top', message: 'Configuração da OpenAI/Mongo salva no localStorage.' });
+    $q.notify({
+      color: 'green',
+      icon: 'save',
+      position: 'top',
+      message: 'Configuração da OpenAI/Mongo salva no LocalStorage.'
+    });
   } catch (err) {
     console.error(err);
-    $q.notify({ type: 'negative', position: 'top', message: 'Falha ao salvar configuração OpenAI/Mongo.' });
+    $q.notify({
+      type: 'negative',
+      position: 'top',
+      message: 'Falha ao salvar configuração OpenAI/Mongo.'
+    });
   }
 };
 
@@ -683,10 +919,19 @@ const saveAIConfig = () => {
       BOT_NAME: botName.value || 'IANO Bot'
     };
     localStorage.setItem(STORAGE_KEYS.ai, JSON.stringify(payload));
-    $q.notify({ color: 'green', position: 'top', icon: 'save', message: 'Configurações da IA salvas no localStorage.' });
+    $q.notify({
+      color: 'green',
+      position: 'top',
+      icon: 'save',
+      message: 'Configurações da IA salvas no localStorage.'
+    });
   } catch (err) {
     console.error(err);
-    $q.notify({ type: 'negative', position: 'top', message: 'Falha ao salvar configurações da IA.' });
+    $q.notify({
+      type: 'negative',
+      position: 'top',
+      message: 'Falha ao salvar configurações da IA.'
+    });
   }
 };
 
@@ -704,10 +949,19 @@ const resetAIConfig = () => {
 const persistDataItems = () => {
   try {
     localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(dataItems.value));
-    $q.notify({ color: 'green', icon: 'save', position: 'top', message: 'Itens salvos em localStorage (JSON atualizado).' });
+    $q.notify({
+      color: 'green',
+      icon: 'save',
+      position: 'top',
+      message: 'Itens salvos em localStorage (JSON atualizado).'
+    });
   } catch (err) {
     console.error(err);
-    $q.notify({ type: 'negative', position: 'top', message: 'Falha ao salvar itens no localStorage.' });
+    $q.notify({
+      type: 'negative',
+      position: 'top',
+      message: 'Falha ao salvar itens no localStorage.'
+    });
   }
 };
 
@@ -729,8 +983,8 @@ const removeImageInput = (index) => {
 const addDataItem = () => {
   const imagesArray = Array.isArray(newItem.value.images)
     ? newItem.value.images
-      .map(v => (v || '').trim())
-      .filter(Boolean)
+        .map(v => (v || '').trim())
+        .filter(Boolean)
     : [];
 
   const item = {
@@ -744,7 +998,11 @@ const addDataItem = () => {
 
   // não adiciona item vazio
   if (!item.title && !item.description) {
-    $q.notify({ type: 'warning', position: 'top', message: 'Preencha pelo menos o título ou a descrição.' });
+    $q.notify({
+      type: 'warning',
+      position: 'top',
+      message: 'Preencha pelo menos o título ou a descrição.'
+    });
     return;
   }
 
@@ -806,10 +1064,18 @@ const exportConfigToFile = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    $q.notify({ color: 'green', position: 'top', message: 'Configuração exportada para iano-whatsapp-config.json' });
+    $q.notify({
+      color: 'green',
+      position: 'top',
+      message: 'Configuração exportada para iano-whatsapp-config.json'
+    });
   } catch (err) {
     console.error(err);
-    $q.notify({ type: 'negative', position: 'top', message: 'Erro ao exportar configuração para JSON.' });
+    $q.notify({
+      type: 'negative',
+      position: 'top',
+      message: 'Erro ao exportar configuração para JSON.'
+    });
   }
 };
 
@@ -914,18 +1180,22 @@ const handleFileChange = (evt) => {
       saveAIConfig();
       persistDataItems();
 
-      // snapshot atual passa a ser o "carregado" (mas ainda não necessariamente aplicado na sessão)
-      const snap = JSON.stringify(buildConfigSnapshot());
-      lastAppliedConfig.value = snap;
-      localStorage.setItem(STORAGE_KEYS.lastApplied, snap);
+      // NÃO atualiza lastApplied aqui, para que hasPendingChanges fique true
+      // até o usuário clicar em "Resetar sessão" e aplicar de fato no backend.
 
       $q.notify({
-        color: 'green', position: 'top', icon: 'save',
-        message: 'Configuração importada com sucesso. Lembre-se de iniciar a sessão ou aplicar mudanças.'
+        color: 'green',
+        position: 'top',
+        icon: 'save',
+        message: 'Configuração importada com sucesso. Clique em "Resetar sessão" para aplicar no bot.'
       });
     } catch (err) {
       console.error(err);
-      $q.notify({ type: 'negative', position: 'top', message: 'Erro ao ler/validar o JSON de configuração.' });
+      $q.notify({
+        type: 'negative',
+        position: 'top',
+        message: 'Erro ao ler/validar o JSON de configuração.'
+      });
     } finally {
       evt.target.value = '';
     }
@@ -933,12 +1203,13 @@ const handleFileChange = (evt) => {
   reader.readAsText(file);
 };
 
-// --------- Iniciar / Aplicar mudanças na sessão ---------
+// --------- Iniciar / Resetar sessão no backend ---------
 const startSession = async () => {
   if (!isRequiredConfigFilled.value) {
     $q.notify({
-      type: 'warning', position: 'top',
-      message: 'Preencha as configurações obrigatórias de OpenAI & Mongo antes de iniciar a sessão.'
+      type: 'warning',
+      position: 'top',
+      message: 'Preencha as configurações obrigatórias de OpenAI & Mongo antes de resetar a sessão.'
     });
     return;
   }
@@ -964,16 +1235,18 @@ const startSession = async () => {
     }
   };
 
+  const wasStarted = sessionStartedOnce.value;
+  const hadPendingChanges = hasPendingChanges.value;
+
   try {
     startSessionLoading.value = true;
 
-    // Se já teve sessão e há mudanças, resetamos antes
-    if (sessionStartedOnce.value && hasPendingChanges.value) {
+    // Sempre reseta sessão anterior se já havia sido iniciada
+    if (wasStarted) {
       try {
         await api.post('/reset-session');
       } catch (e) {
-        // se falhar, só loga — pode ser que o servidor já esteja "limpo"
-        console.error('Falha ao resetar sessão antes de aplicar mudanças', e);
+        console.error('Falha ao resetar sessão antes de iniciar novamente', e);
       }
     }
 
@@ -987,23 +1260,32 @@ const startSession = async () => {
     localStorage.setItem(STORAGE_KEYS.sessionStarted, '1');
     setSnapshotAsLastApplied();
 
-    const msg = hasPendingChanges.value
-      ? 'Sessão reiniciada e mudanças aplicadas! Escaneie o QR Code para iniciar.'
-      : 'Sessão iniciada! Escaneie o QR Code para iniciar.';
+    let msg;
+    if (!wasStarted) {
+      msg = 'Sessão iniciada! Escaneie o QR Code para conectar o WhatsApp.';
+    } else if (hadPendingChanges) {
+      msg = 'Sessão resetada e mudanças aplicadas! Escaneie o QR Code novamente.';
+    } else {
+      msg = 'Sessão resetada! Escaneie o QR Code novamente.';
+    }
 
     $q.notify({
-      color: 'green', position: 'top', icon: 'play_circle', 
+      color: 'green',
+      position: 'top',
+      icon: 'refresh',
       message: msg
     });
+
+    router.push('/iniciar');
   } catch (err) {
     console.error(err);
     $q.notify({
-      type: 'negative', position: 'top',
-      message: 'Erro ao iniciar/aplicar mudanças na sessão: ' + (err?.message || 'verifique o backend.')
+      type: 'negative',
+      position: 'top',
+      message: 'Erro ao resetar/iniciar a sessão: ' + (err?.message || 'verifique o backend.')
     });
   } finally {
     startSessionLoading.value = false;
-    router.push('/iniciar')
   }
 };
 
@@ -1063,17 +1345,16 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-/* Glassmorphism nos cards */
-
-
 /* Header do expansion com card glass esverdeado */
 .expansion-header {
   margin: 4px;
   padding: 4px 8px;
   border-radius: 14px;
-  background: radial-gradient(circle at top left,
+  background: radial-gradient(
+      circle at top left,
       rgba(16, 185, 129, 0.2),
-      rgba(15, 23, 42, 0.9));
+      rgba(15, 23, 42, 0.9)
+  );
   border: 1px solid rgba(45, 212, 191, 0.35);
 }
 
@@ -1107,6 +1388,4 @@ onMounted(() => {
 .hidden {
   display: none;
 }
-
 </style>
-
