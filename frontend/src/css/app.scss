@@ -4,22 +4,28 @@ body {
     font-family: "Montserrat", sans-serif;
     font-optical-sizing: auto;
     font-style: normal;
-    background: #161717;
+    background:
+        radial-gradient(circle at top, #1a1a1a 0, #2b2b2b 55%, #2c2c2c 100%);
 }
 
 .w100 {
     width: 100%;
 }
 
-.bg-glass{
-    background-color: #0a0f13c5 !important;
-    backdrop-filter: blur(10px);
+.bg-glass {
+    background-color: #0b1116a1 !important;
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgb(78, 78, 78);
 }
 
 .q-card {
-  background: #161717;
-  border: 1px solid rgba(233, 233, 233, 0.2);
-  box-shadow: 0 10px 10px rgba(0, 0, 0, 0.635);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+    background: #161717;
+    border: 1px solid rgba(233, 233, 233, 0.2);
+    box-shadow: 0 10px 10px rgba(0, 0, 0, 0.635);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.q-input, .q-select, .q-textarea {
+    background-color: #e2e2e2!important;
 }

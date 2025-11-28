@@ -1,11 +1,6 @@
 <template>
-  <q-page class="bg-primary q-pa-md">
-    <div class="">
-
-      <!-- Loading geral -->
-      <q-inner-loading :showing="loading">
-        <q-spinner-dots size="50px" color="teal-4" />
-      </q-inner-loading>
+  <q-page class="q-pa-md">
+    <div>
 
       <!-- Banner de erro -->
       <div v-if="errorMessage" class="q-mb-md">
@@ -50,7 +45,7 @@
               </q-badge>
 
               <span class="text-caption">
-                Período exibido: {{ rangeLabel }} (baseado nos logs da IA).
+                Período exibido: {{ rangeLabel }}.
               </span>
 
               <div class="text-caption text-grey-6 q-mt-xs">
@@ -74,7 +69,7 @@
                 :options="rangeOptions"
                 dense
                 glossy
-                toggle-color="teal-4"
+                toggle-color="accent"
                 color="grey-9"
                 text-color="grey-1"
                 size="md"
@@ -146,7 +141,7 @@
       </div>
 
       <!-- Caso ainda não tenha dados -->
-      <div v-if="!hasRealData && !loading" class="q-mb-md">
+      <div v-if="!hasRealData" class="q-mb-md">
         <q-card class="section-card">
           <q-card-section>
             <div class="text-subtitle1 text-grey-2 q-mb-xs">
@@ -304,132 +299,128 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount } from 'vue';
-import { useQuasar } from 'quasar';
-import { useRouter } from 'vue-router';
-import { api } from 'boot/axios';
+import { ref, computed, onBeforeMount } from 'vue'
+import { useQuasar } from 'quasar'
+import { api } from 'boot/axios'
 
-const $q = useQuasar();
-const router = useRouter();
+const $q = useQuasar()
 const isMobile = $q.screen.lt.md
+
 const STORAGE_KEYS = {
   openai: 'config_openai'
-};
+}
 
 // --- ESTADO ---
-const dailyUsage = ref([]); // vindo da API (range configurável)
+const dailyUsage = ref([]) // vindo da API (range configurável)
 const summary = ref({
   totalTokensThisRange: 0,
   spentUsdRange: 0,
   spentBrlRange: 0
-});
+})
 
-const loading = ref(false);
-const errorMessage = ref('');
-const openaiConfig = ref(null);
+const errorMessage = ref('')
+const openaiConfig = ref(null)
 
 // range de período
-const range = ref('7d');
+const range = ref('7d')
 const rangeOptions = [
   { label: '7 dias', value: '7d' },
   { label: '30 dias', value: '30d' },
   { label: 'Mês atual', value: 'month' }
-];
+]
 
 // helper p/ ler número do localStorage aceitando "10", "10.5" ou "10,50"
 function parseCfgNumber (val, fallback = 0) {
-  if (val === null || val === undefined || val === '') return fallback;
-  const normalized = String(val).replace(',', '.');
-  const n = Number(normalized);
-  return Number.isFinite(n) ? n : fallback;
+  if (val === null || val === undefined || val === '') return fallback
+  const normalized = String(val).replace(',', '.')
+  const n = Number(normalized)
+  return Number.isFinite(n) ? n : fallback
 }
 
 // taxa de câmbio USD→BRL (pode vir da config_openai ou usa fallback)
 const usdToBrlRate = computed(() => {
-  const cfg = openaiConfig.value || {};
+  const cfg = openaiConfig.value || {}
   const raw =
     cfg.USD_BRL_RATE ??
     cfg.OPENAI_USD_BRL ??
-    null;
+    null
 
   if (raw === null || raw === undefined || raw === '') {
     // fallback se nada estiver configurado
-    return 6.0;
+    return 6.0
   }
 
-  const n = Number(String(raw).replace(',', '.'));
-  return Number.isFinite(n) && n > 0 ? n : 6.0;
-});
+  const n = Number(String(raw).replace(',', '.'))
+  return Number.isFinite(n) && n > 0 ? n : 6.0
+})
 
 // label legível do range
 const rangeLabel = computed(() => {
-  if (range.value === '30d') return 'últimos 30 dias';
-  if (range.value === 'month') return 'mês atual';
-  return 'últimos 7 dias';
-});
+  if (range.value === '30d') return 'últimos 30 dias'
+  if (range.value === 'month') return 'mês atual'
+  return 'últimos 7 dias'
+})
 
 // --- BLOQUEIO SEM OPENAI_API_KEY + carregamento inicial ---
 onBeforeMount(async () => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.openai);
+    const raw = localStorage.getItem(STORAGE_KEYS.openai)
     if (!raw) {
-      notifyAndRedirect();
-      return;
+      notifyNoConfig()
+      return
     }
 
-    const parsed = JSON.parse(raw);
-    const hasKey = !!parsed.OPENAI_API_KEY;
+    const parsed = JSON.parse(raw)
+    const hasKey = !!parsed.OPENAI_API_KEY
 
     if (!hasKey) {
-      notifyAndRedirect();
-      return;
+      notifyNoConfig()
+      return
     }
 
     // guarda a config em memória (para taxa de câmbio etc.)
-    openaiConfig.value = parsed;
+    openaiConfig.value = parsed
 
     // (debug opcional)
-    console.log('[Wallet] config_openai carregada:', parsed);
+    console.log('[Wallet] config_openai carregada:', parsed)
 
-    await fetchTokenUsage();
+    await fetchTokenUsage()
   } catch (e) {
-    console.error('Erro ao validar OPENAI_API_KEY para Wallet de tokens', e);
-    notifyAndRedirect();
+    console.error('Erro ao validar OPENAI_API_KEY para Wallet de tokens', e)
+    notifyNoConfig()
   }
-});
+})
 
-function notifyAndRedirect () {
+function notifyNoConfig () {
   $q.notify({
     color: 'amber',
     textColor: 'black',
     icon: 'settings',
     position: 'top',
     message: 'Configure as credenciais obrigatórias antes de acessar a Wallet de Tokens.'
-  });
-  router.push('/');
+  })
 }
 
 async function fetchTokenUsage () {
   try {
-    loading.value = true;
-    errorMessage.value = '';
+    errorMessage.value = ''
 
     // pega config do localStorage
-    const raw = localStorage.getItem('config_openai');
-    let openaiKey = '';
+    const raw = localStorage.getItem('config_openai')
+    let openaiKey = ''
 
     if (raw) {
       try {
-        const parsed = JSON.parse(raw);
-        openaiKey = parsed.OPENAI_API_KEY || '';
+        const parsed = JSON.parse(raw)
+        openaiKey = parsed.OPENAI_API_KEY || ''
       } catch (e) {
-        console.error('Erro ao parsear config_openai', e);
+        console.error('Erro ao parsear config_openai', e)
       }
     }
 
     if (!openaiKey) {
-      errorMessage.value = 'Configure sua OPENAI API KEY na aba Configurar antes de ver o uso de tokens.';
-      return;
+      errorMessage.value = 'Configure sua OPENAI API KEY na aba Configurar antes de ver o uso de tokens.'
+      return
     }
 
     const { data } = await api.get('/token-usage', {
@@ -440,46 +431,43 @@ async function fetchTokenUsage () {
       headers: {
         'x-openai-key': openaiKey
       }
-    });
+    })
 
     if (!data?.ok) {
-      throw new Error(data?.error || 'Falha ao buscar uso de tokens');
+      throw new Error(data?.error || 'Falha ao buscar uso de tokens')
     }
 
-    const daily = Array.isArray(data.daily) ? data.daily : [];
-    dailyUsage.value = daily;
+    const daily = Array.isArray(data.daily) ? data.daily : []
+    dailyUsage.value = daily
 
-    const apiSummary = data.summary || {};
+    const apiSummary = data.summary || {}
 
-    const totalTokensRange = Number(apiSummary.totalTokensThisRange || 0);
-    const spentUsdRange = Number(apiSummary.spentUsdThisRange || 0);
-    const spentBrlRange = spentUsdRange * usdToBrlRate.value;
+    const totalTokensRange = Number(apiSummary.totalTokensThisRange || 0)
+    const spentUsdRange = Number(apiSummary.spentUsdThisRange || 0)
+    const spentBrlRange = spentUsdRange * usdToBrlRate.value
 
     summary.value = {
       totalTokensThisRange: totalTokensRange,
       spentUsdRange,
       spentBrlRange
-    };
+    }
   } catch (err) {
-    console.error('Erro ao carregar dados de tokens', err);
-    errorMessage.value = err?.message || 'Erro ao buscar dados de tokens';
+    console.error('Erro ao carregar dados de tokens', err)
+    errorMessage.value = err?.message || 'Erro ao buscar dados de tokens'
 
-    const backendMsg = err?.response?.data?.error;
+    const backendMsg = err?.response?.data?.error
     $q.notify({
       color: 'negative',
       position: 'top',
       icon: 'error',
       message: backendMsg || errorMessage.value
-    });
-  } finally {
-    loading.value = false;
+    })
   }
 }
 
-
 // handler quando mudar o range (botão toggle)
 async function onChangeRange () {
-  await fetchTokenUsage();
+  await fetchTokenUsage()
 }
 
 // --- COLUMNS TABELA ---
@@ -489,105 +477,105 @@ const columns = [
   { name: 'usd', label: 'Custo (USD)', field: 'usd', align: 'right' },
   { name: 'brl', label: 'Custo (BRL)', field: 'brl', align: 'right' },
   { name: 'share', label: '% do pico (tokens)', field: 'tokens', align: 'left' }
-];
+]
 
 // rows com BRL calculado
 const dailyUsageComputed = computed(() => {
-  const rate = usdToBrlRate.value;
+  const rate = usdToBrlRate.value
   return dailyUsage.value.map(d => ({
     ...d,
     brl: (Number(d.usd) || 0) * rate
-  }));
-});
+  }))
+})
 
 // --- GRÁFICO (SVG) ---
-const chartWidth = 100;
-const chartHeight = 40;
-const chartPaddingY = 6; // padding vertical pra nao “colar” topo/fundo
+const chartWidth = 100
+const chartHeight = 40
+const chartPaddingY = 6 // padding vertical pra nao “colar” topo/fundo
 
 const maxTokensDay = computed(() => {
-  if (!dailyUsage.value.length) return 1;
-  return Math.max(...dailyUsage.value.map(d => d.tokens || 0));
-});
+  if (!dailyUsage.value.length) return 1
+  return Math.max(...dailyUsage.value.map(d => d.tokens || 0))
+})
 
 const linePoints = computed(() => {
-  const max = maxTokensDay.value || 1;
-  const n = dailyUsage.value.length || 1;
-  const usableHeight = chartHeight - chartPaddingY * 2;
+  const max = maxTokensDay.value || 1
+  const n = dailyUsage.value.length || 1
+  const usableHeight = chartHeight - chartPaddingY * 2
 
   return dailyUsage.value.map((d, idx) => {
-    const x = n === 1 ? chartWidth / 2 : (idx / (n - 1)) * chartWidth;
-    const normalized = (d.tokens || 0) / max;
-    const y = chartPaddingY + (1 - normalized) * usableHeight;
-    return { x, y };
-  });
-});
+    const x = n === 1 ? chartWidth / 2 : (idx / (n - 1)) * chartWidth
+    const normalized = (d.tokens || 0) / max
+    const y = chartPaddingY + (1 - normalized) * usableHeight
+    return { x, y }
+  })
+})
 
 const linePointsAttr = computed(() =>
   linePoints.value.map(p => `${p.x},${p.y}`).join(' ')
-);
+)
 
 const areaPointsAttr = computed(() => {
-  if (!linePoints.value.length) return '';
-  const first = linePoints.value[0];
-  const last = linePoints.value[linePoints.value.length - 1];
-  const baselineY = chartHeight - chartPaddingY;
+  if (!linePoints.value.length) return ''
+  const first = linePoints.value[0]
+  const last = linePoints.value[linePoints.value.length - 1]
+  const baselineY = chartHeight - chartPaddingY
 
   return [
     `${first.x},${baselineY}`,
     ...linePoints.value.map(p => `${p.x},${p.y}`),
     `${last.x},${baselineY}`
-  ].join(' ');
-});
+  ].join(' ')
+})
 
 // --- FORMATADORES ---
 function formatUsd (value) {
-  const v = Number(value || 0);
+  const v = Number(value || 0)
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 4
-  }).format(v);
+  }).format(v)
 }
 
 function formatBRL (value) {
-  const v = Number(value || 0);
+  const v = Number(value || 0)
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(v);
+  }).format(v)
 }
 
 function formatNumber (value) {
   return new Intl.NumberFormat('pt-BR', {
     maximumFractionDigits: 0
-  }).format(Number(value || 0));
+  }).format(Number(value || 0))
 }
 
 function formatDate (isoDate) {
-  const d = new Date(isoDate);
-  if (Number.isNaN(d.getTime())) return isoDate;
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  const d = new Date(isoDate)
+  if (Number.isNaN(d.getTime())) return isoDate
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
 function formatShortDate (isoDate) {
-  const d = new Date(isoDate);
-  if (Number.isNaN(d.getTime())) return isoDate;
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  const d = new Date(isoDate)
+  if (Number.isNaN(d.getTime())) return isoDate
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
 const lastUpdatedLabel = computed(() => {
-  const last = dailyUsage.value[dailyUsage.value.length - 1];
-  if (!last) return '-';
-  const d = new Date(last.date);
-  if (Number.isNaN(d.getTime())) return '-';
+  const last = dailyUsage.value[dailyUsage.value.length - 1]
+  if (!last) return '-'
+  const d = new Date(last.date)
+  if (Number.isNaN(d.getTime())) return '-'
   return d.toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit'
-  });
-});
+  })
+})
 
-const hasRealData = computed(() => dailyUsage.value.length > 0);
+const hasRealData = computed(() => dailyUsage.value.length > 0)
 </script>
 
 <style scoped>

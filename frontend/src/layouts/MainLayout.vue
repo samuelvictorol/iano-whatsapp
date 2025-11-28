@@ -14,7 +14,7 @@
       </div>
 
       <q-tabs align="center">
-        <q-route-tab to="/" exact label="Configurar" class="text-grey-4" icon="settings" />
+        <q-route-tab to="/configurar" exact label="Configurar" class="text-grey-4" icon="settings" />
         <q-route-tab to="/iniciar" label="Iniciar"
           :icon="!canStart ? 'mdi-robot-dead-outline' : 'mdi-robot-happy-outline'" @click="onClickIniciarTab"
           :class="{ 'text-green-14  ': canStart }" />
@@ -44,7 +44,7 @@ const STORAGE_KEYS = {
 const canStart = ref(false)
 
 function goToDoc() {
-  window.open('https://samuelvictorol.github.io/iano-whatsapp/', '_blank');
+  router.push('/')
 }
 
 function hasRequiredConfig() {

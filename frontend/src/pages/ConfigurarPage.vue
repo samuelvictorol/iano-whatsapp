@@ -1,6 +1,6 @@
 <!-- ConfigurarPage.vue -->
 <template>
-  <q-page class="bg-primary q-pa-md">
+  <q-page class="q-pa-md">
     <div class="settings-page">
 
       <!-- Header -->
@@ -463,7 +463,7 @@
               <q-chip
                 v-if="hasDataItems"
                 dense
-                color="green"
+                color="green-14"
                 text-color="white"
                 icon="check_circle"
               >
@@ -1230,7 +1230,7 @@ const startSession = async () => {
       AI_CONTEXT: aiContext.value,
       AI_RULES: aiRules.value,
       AI_METADATA: aiMetadata.value,
-      BOT_NAME: botName.value || 'IANO Bot',
+      BOT_NAME: botName.value || 'IanoBot',
       dataItems: dataItems.value
     }
   };

@@ -1,5 +1,5 @@
 <template>
-  <q-page class="bg-primary disparo-page q-pa-md q-pa-lg-md">
+  <q-page class="disparo-page q-pa-md q-pa-lg-md">
     <div class="row justify-center q-pt-md">
       <div class="col-12 col-md-10 col-lg-8">
 
@@ -218,10 +218,6 @@
                     @click="openSaveGroupDialog"
                     :disable="parsedContacts.length === 0"
                   />
-                </div>
-                <div class="col text-caption text-grey-5">
-                  Use essa opção para reaproveitar essa lista em futuras campanhas
-                  sem precisar colar os números novamente.
                 </div>
               </div>
             </div>

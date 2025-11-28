@@ -1,6 +1,6 @@
 <!-- IniciarPage -->
 <template>
-  <q-page class="ia-page bg-primary">
+  <q-page class="ia-page">
     <div class="ia-root">
       <!-- CONTEÚDO PRINCIPAL -->
       <main class="ia-main">
@@ -11,8 +11,8 @@
               <strong>QR Code</strong>
               <div class="row" style="gap: 8px;">
                 <!-- <span class="mono">{{ qrStatus }}</span> -->
-                <!-- <q-btn dense flat size="sm" icon="play_arrow" label="Iniciar sessão" :loading="startLoading"
-                  @click="startSessionFromStorage" /> -->
+                <q-btn dense flat size="sm" icon="play_arrow" label="Iniciar sessão" :loading="startLoading"
+                  @click="startSessionFromStorage" />
                 <q-btn dense flat size="sm" icon="refresh" label="Resetar sessão" :loading="resetLoading"
                   @click="resetSession" />
               </div>
