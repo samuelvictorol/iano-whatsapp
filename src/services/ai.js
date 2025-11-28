@@ -9,6 +9,12 @@ const { logTokenUsage } = require('./token-usage');
 
 const OPENAI_TIMEOUT_MS = 20000; // 20s
 
+/**
+ * JSON Schema para a resposta SDR.
+ * Agora aceita:
+ *  - string simples (mensagem de texto)
+ *  - objeto { type: "image", url, caption } para mandar imagem pelo WhatsApp
+ */
 function buildJsonSchema () {
   return {
     name: 'sdr_response',
@@ -16,13 +22,38 @@ function buildJsonSchema () {
       type: 'object',
       additionalProperties: false,
       properties: {
-        intencao: { type: 'string' },          // livre, não mais enum fixo
-        perfil_cliente: { type: 'string' },    // livre
+        intencao: { type: 'string' },       // livre
+        perfil_cliente: { type: 'string' }, // livre, opcional
         ia_reply_messages: {
           type: 'array',
           minItems: 1,
-          maxItems: 3,
-          items: { type: 'string' }
+          maxItems: 4,
+          items: {
+            oneOf: [
+              {
+                // texto puro
+                type: 'string'
+              },
+              {
+                // mensagem de imagem com legenda
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  type: {
+                    type: 'string',
+                    enum: ['image']
+                  },
+                  url: {
+                    type: 'string'
+                  },
+                  caption: {
+                    type: 'string'
+                  }
+                },
+                required: ['type', 'url']
+              }
+            ]
+          }
         }
       },
       required: ['intencao', 'ia_reply_messages']
@@ -80,6 +111,7 @@ function botPrefix (line) {
 
 /**
  * Prompt para TEXTO (SDR / vendas), usando configs do painel
+ * Agora inclui URLs de imagens do catálogo e explica como mandar imagem.
  */
 function buildSystemPrompt (cfg) {
   const ctx = cfg.ai?.AI_CONTEXT || '';
@@ -96,19 +128,38 @@ function buildSystemPrompt (cfg) {
         const price = item.price != null ? `Preço: R$ ${item.price}` : '';
         const promo = item.promoPrice != null ? `Promo: R$ ${item.promoPrice}` : '';
         const desc = item.description || '';
+
+        // imagens: lista plana de URLs
+        let imagesPart = '';
+        const images = Array.isArray(item.images)
+          ? item.images.map(v => (v || '').trim()).filter(Boolean)
+          : [];
+        if (images.length) {
+          imagesPart =
+            '\n    [IMAGENS_URLS]: ' +
+            images.join(', ');
+        }
+
         const line1 =
           `(${idx + 1}) ${title}` +
           (cat ? ` [${cat}]` : '') +
           (price || promo ? ` — ${[price, promo].filter(Boolean).join(' | ')}` : '');
         const line2 = desc ? `\n    ${desc}` : '';
-        return line1 + line2;
+
+        return line1 + line2 + imagesPart;
       })
-      .join('\n');
+      .join('\n\n');
 
     catalogSection =
       '\n[CATÁLOGO DE ITENS]\n' +
       mapped +
-      '\nVocê pode usar esses itens para responder dúvidas e sugerir opções, mas não invente produtos que não estejam na lista.';
+      '\n\nREGRAS PARA IMAGENS:\n' +
+      '- Se o cliente pedir foto/imagem de um item, procure pelas URLs de imagem na seção [IMAGENS_URLS].\n' +
+      '- Use SEMPRE uma URL que realmente esteja listada para aquele item.\n' +
+      '- NUNCA invente ou altere URLs de imagem (não crie novos links que não estejam na lista).\n' +
+      '- Para mandar uma imagem, você deve criar um item em "ia_reply_messages" com este formato exato:\n' +
+      '  { "type": "image", "url": "URL_EXATA_DA_IMAGEM", "caption": "Legenda curta em PT-BR" }.\n' +
+      '- Você pode combinar: primeiro uma mensagem de texto explicando, depois um item de imagem com a URL.\n';
   }
 
   return [
@@ -119,7 +170,12 @@ function buildSystemPrompt (cfg) {
     rules ? '\n[REGRAS ESPECÍFICAS]\n' + rules : '',
     metadata ? '\n[INFORMAÇÕES ADICIONAIS]\n' + metadata : '',
     catalogSection,
-    '\nSua resposta DEVE ser apenas um JSON válido, seguindo exatamente o schema fornecido pelo sistema.'
+    '\n[FORMATO DA RESPOSTA]\n' +
+      '- Sua resposta DEVE ser apenas um JSON válido, seguindo exatamente o schema fornecido pelo sistema.\n' +
+      '- "ia_reply_messages" é um array onde cada item pode ser:\n' +
+      '  1) Uma string de texto (mensagem normal do WhatsApp).\n' +
+      '  2) Um objeto imagem no formato: { "type": "image", "url": "https://...", "caption": "..." }.\n' +
+      '- Use imagens SOMENTE com URLs que vierem do catálogo / dataItems. Nunca invente um link novo.'
   ]
     .join('\n')
     .trim();
@@ -191,10 +247,13 @@ async function callAI ({ chatId, text, context_messages }) {
   const openai = getOpenAIClient();
 
   const systemPrompt = buildSystemPrompt(cfg);
+
+  // inclui também os dataItems crus no payload do usuário
   const userPayload = {
     chat_id: chatId,
     text: String(text || ''),
-    context_messages: context_messages || []
+    context_messages: context_messages || [],
+    dataItems: Array.isArray(cfg.ai?.dataItems) ? cfg.ai.dataItems : []
   };
 
   const model = cfg.openai?.model || 'gpt-4.1-mini';
@@ -259,6 +318,7 @@ async function callAI ({ chatId, text, context_messages }) {
     };
   }
 
+  // garante array válido
   if (!Array.isArray(parsed.ia_reply_messages) || !parsed.ia_reply_messages.length) {
     parsed.ia_reply_messages = ['Não consegui entender, pode repetir?'];
   }
@@ -282,7 +342,8 @@ async function describeImage ({ chatId, filePath, mimeType, userText }) {
   const cfg = getRuntimeConfig();
   const openai = getOpenAIClient();
 
-  const model = cfg.openai?.model || 'gpt-4.1-mini'; // precisa ser modelo com visão (gpt-4.1, 4.1-mini, 4o, etc.)
+  // precisa ser modelo com visão (gpt-4.1, 4.1-mini, 4o, etc.)
+  const model = cfg.openai?.model || 'gpt-4.1-mini';
   const temperature = Number(
     cfg.openai?.temperature !== undefined ? cfg.openai.temperature : 0.7
   );
