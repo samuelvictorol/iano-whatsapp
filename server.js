@@ -1035,7 +1035,9 @@ async function handleDescribeImage({ doc, instruction, filePath, mimeType }) {
         });
       }
 
-      const client = await getClient();
+      const client = await getClient().catch((err) => {
+        throw new Error('WhatsApp não está conectado: ' + (err?.message || err));
+      });
 
       const results = [];
       let success = 0;
@@ -1369,6 +1371,51 @@ async function handleDescribeImage({ doc, instruction, filePath, mimeType }) {
       });
     } catch (err) {
       console.error('/contact-groups GET error', err);
+      return res
+        .status(500)
+        .json({ ok: false, error: err?.message || 'internal error' });
+    }
+  });
+  // Remove grupo de contatos por label
+  app.delete('/contact-groups/:label', async (req, res) => {
+    try {
+      if (TOKEN && req.headers['x-token'] !== TOKEN) {
+        return res.status(401).json({ ok: false, error: 'unauthorized' });
+      }
+
+      if (!hasRuntimeConfig() || !mongoDb) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Sessão ainda não configurada. Use /start-session no painel.'
+        });
+      }
+
+      const { label } = req.params;
+      const lbl = String(label || '').trim();
+
+      if (!lbl) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Parâmetro "label" é obrigatório.'
+        });
+      }
+
+      const col = await getContactGroupsCollection();
+      const result = await col.deleteOne({ label: lbl });
+
+      if (!result.deletedCount) {
+        return res.status(404).json({
+          ok: false,
+          error: `Grupo "${lbl}" não encontrado.`
+        });
+      }
+
+      return res.json({
+        ok: true,
+        deletedLabel: lbl
+      });
+    } catch (err) {
+      console.error('/contact-groups DELETE error', err);
       return res
         .status(500)
         .json({ ok: false, error: err?.message || 'internal error' });
