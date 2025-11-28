@@ -543,7 +543,7 @@ import { useRouter } from 'vue-router'
 
 const $q = useQuasar()
 const router = useRouter()
-const apiBaseUrl = api.defaults.baseURL || 'http://localhost:10000'
+const apiBaseUrl = api.defaults.baseURL
 
 // modo de disparo
 const bulkMode = ref('text') // 'text' | 'media' | 'upload'

@@ -83,7 +83,7 @@ const STORAGE_KEYS = {
 };
 
 // BASE_URL vindo do axios do boot
-const BASE_URL = (api.defaults.baseURL || 'http://localhost:10000').replace(/\/+$/, '');
+const BASE_URL = (api.defaults.baseURL).replace(/\/+$/, '');
 
 // QR
 const qrImgSrc = ref('');
