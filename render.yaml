@@ -1,60 +1,58 @@
 services:
-  # ==========================
-  # 1) BACKEND - WHATSAPP + AI
-  # ==========================
+  # ===========================
+  # 1) Backend - WhatsApp + IA
+  # ===========================
   - type: web
-    name: iano-whatsapp-backend
-    runtime: docker
-    env: docker        # importante pra Docker
+    name: iano-whatsapp-api
+    env: docker            # usa o Dockerfile da raiz
     plan: free
-    region: oregon     # aqui pode ter region, é web docker normal
+
     dockerfilePath: ./Dockerfile
 
-    # Porta interna do container: teu server.js usa process.env.PORT || 10000
-    # O Render vai setar PORT automaticamente, então não precisa mudar o código.
     envVars:
-      - key: NODE_ENV
-        value: production
+      - key: PORT
+        value: "10000"
 
-      # se quiser, já deixa o token de proteção do painel
-      # (ou cria esse env var depois pelo painel do Render)
-      - key: DASH_TOKEN
-        value: ""
-
-      # TTL opcional de mensagens no Mongo (0 = nunca expira)
+      # TTL opcional das mensagens no Mongo (0 = sem expirar)
       - key: MSG_TTL_DAYS
         value: "0"
 
-      # ID da sessão do WhatsApp (se quiser rodar múltiplas sessões depois)
+      # ID da sessão do WhatsApp
       - key: WWEBJS_CLIENT_ID
         value: "whatsapp-bot"
 
-    # ⚠️ IMPORTANTE: sem `disks` no free tier!
-    # A pasta /app/data (wwebjs + media) vai ficar no filesystem efêmero do container.
-    # Isso significa:
-    # - Enquanto o serviço não for redeployado, o cache do WhatsApp persiste.
-    # - Quando der REDEPLOY, vai precisar escanear o QR de novo (normal pro free).
+      # Diretórios de sessão/mídia dentro do container
+      - key: WWEBJS_STORE
+        value: "/app/data/wwebjs"
+      - key: MEDIA_DIR
+        value: "/app/data/media"
 
-  # ==========================
-  # 2) FRONTEND - QUASAR (SPA)
-  # ==========================
+      # Puppeteer/Chromium (já configurado no Dockerfile)
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: "/usr/bin/chromium"
+      - key: PUPPETEER_SKIP_DOWNLOAD
+        value: "true"
+
+      # Token opcional pra proteger o painel/API
+      - key: DASH_TOKEN
+        generateValue: true
+
+
+  # ===========================
+  # 2) Frontend - Quasar SPA
+  # ===========================
   - type: web
     name: iano-whatsapp-frontend
-    runtime: static     # site estático
-    repoPath: frontend  # porque o projeto Quasar está em ./frontend
+    env: static            # site estático
+    plan: free
 
+    # diz que o projeto desse serviço está em ./frontend
+    rootDir: frontend
+
+    # comando de build do Quasar (a partir de ./frontend)
     buildCommand: |
       npm install
-      npx quasar build
+      npm run build
 
-    # Caminho padrão da build SPA do Quasar
+    # pasta que o Quasar gera (dentro de ./frontend)
     staticPublishPath: dist/spa
-
-    # ❌ NÃO colocar region aqui: static não aceita region.
-    # ❌ Também não precisa de plan aqui (static sites já são free por padrão).
-
-    # Se você usar env de build no Quasar (ex.: QUASAR_PUBLIC_API_BASE_URL),
-    # pode declarar aqui:
-    # envVars:
-    #   - key: QUASAR_PUBLIC_API_BASE_URL
-    #     value: "https://iano-whatsapp-backend.onrender.com"
