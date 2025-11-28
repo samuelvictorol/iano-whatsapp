@@ -66,11 +66,7 @@ function hasRequiredConfig() {
 function onClickIniciarTab(evt) {
   // sempre recalcula antes
   canStart.value = hasRequiredConfig()
-
   if (!canStart.value) {
-    evt?.preventDefault?.()
-    evt?.stopPropagation?.()
-
     $q.notify({
       textColor: 'black',
       color: 'amber',
@@ -79,7 +75,6 @@ function onClickIniciarTab(evt) {
       message: 'Antes de iniciar, Configure sua OPENAI API KEY e MONGO CONNECTION STRING na aba Configurar.'
     })
 
-    router.push('/')
   }
   // se estiver tudo ok, o q-route-tab navega normalmente
 }
