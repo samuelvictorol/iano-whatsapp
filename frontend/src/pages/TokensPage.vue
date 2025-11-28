@@ -28,11 +28,11 @@
             <div class="q-mt-sm text-grey-5">
               <q-badge
                 v-if="hasRealData"
-                color="teal-4"
+                color="green-14"
                 text-color="black"
-                class="q-mr-sm"
+                class="q-mr-sm text-bold"
               >
-                Dados reais (OpenAI → logs)
+                Dados reais
               </q-badge>
 
               <q-badge
@@ -68,7 +68,6 @@
                 v-model="range"
                 :options="rangeOptions"
                 dense
-                glossy
                 toggle-color="accent"
                 color="grey-9"
                 text-color="grey-1"
@@ -284,7 +283,7 @@
                 <q-linear-progress
                   :value="maxTokensDay ? (props.row.tokens || 0) / maxTokensDay : 0"
                   track-color="grey-9"
-                  color="teal-4"
+                  color="green-14"
                   rounded
                   size="8px"
                 />
@@ -596,8 +595,8 @@ const hasRealData = computed(() => dailyUsage.value.length > 0)
   border-radius: 14px;
   background: radial-gradient(
     circle at top left,
-    rgba(34, 197, 94, 0.12),
-    rgba(15, 23, 42, 0.95)
+    #0A0F13,
+    #0A0F13
   );
   padding: 12px;
 }
@@ -609,7 +608,7 @@ const hasRealData = computed(() => dailyUsage.value.length > 0)
 
 /* Tabela */
 .wallet-table :deep(thead tr) {
-  background: teal;
+  background:#424242
 }
 
 .wallet-table :deep(th) {
