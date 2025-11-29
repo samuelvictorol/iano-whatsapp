@@ -30,11 +30,13 @@ const PORT = Number(process.env.PORT || 10000);
 const TOKEN = process.env.DASH_TOKEN || ''; // opcional
 const DB_NAME = 'iano_whatsapp';
 const COL_NAME = 'messages';
+const CONFIG_COL_NAME = 'runtime_config';
 const MSG_TTL_DAYS = Number(process.env.MSG_TTL_DAYS || 0);
 
 let mongoClient = null;
 let mongoDb = null;
 let mongoCol = null;
+let configCol = null;
 
 const upload = multer({
   dest: MEDIA_DIR,
@@ -55,11 +57,13 @@ async function connectMongo (mongoUri, dbName = DB_NAME, colName = COL_NAME) {
     mongoClient = null;
     mongoDb = null;
     mongoCol = null;
+    configCol = null;
   }
 
   mongoClient = await MongoClient.connect(mongoUri, { ignoreUndefined: true });
   mongoDb = mongoClient.db(dbName);
   mongoCol = mongoDb.collection(colName);
+  configCol = mongoDb.collection(CONFIG_COL_NAME);
 
   await mongoCol.createIndex({ chatId: 1, fromMe: 1, timestamp: -1 });
   if (MSG_TTL_DAYS > 0) {
@@ -68,6 +72,8 @@ async function connectMongo (mongoUri, dbName = DB_NAME, colName = COL_NAME) {
       { expireAfterSeconds: MSG_TTL_DAYS * 86400 }
     );
   }
+
+  await configCol.createIndex({ updatedAt: -1 });
 
   console.log(`[🍃] Mongo conectado em ${mongoUri} | DB=${dbName} | Col=${colName}`);
 }
@@ -324,7 +330,7 @@ app.get('/events', async (req, res) => {
     );
   }
 
-  // status inicial (últimos chats vistos) – só se Mongo estiver configurado
+  // status inicial (últimos chats vistos)
   if (mongoCol) {
     try {
       const since = Date.now() - 24 * 60 * 60 * 1000;
@@ -391,12 +397,10 @@ function normalizeDigitsForLookup (rawNumber) {
   let digits = String(rawNumber).replace(/\D/g, '');
   if (!digits) return null;
 
-  // Garante prefixo 55 (Brasil)
   if (!digits.startsWith('55')) {
     digits = '55' + digits;
   }
 
-  // 55 + DDD (2) + número (8 ou 9) => 12 ou 13 dígitos
   if (digits.length !== 12 && digits.length !== 13) {
     return null;
   }
@@ -424,7 +428,6 @@ async function resolveChatIdForSend (client, rawNumber) {
   }
 
   if (!numberId) {
-    // número não usa WhatsApp ou WA não conseguiu resolver
     return {
       ok: false,
       reason: 'not_whatsapp_user',
@@ -436,7 +439,7 @@ async function resolveChatIdForSend (client, rawNumber) {
   return {
     ok: true,
     reason: 'ok',
-    chatId: numberId._serialized, // ex: 5561xxxx@c.us
+    chatId: numberId._serialized,
     digits
   };
 }
@@ -464,12 +467,10 @@ function normalizeToChatIdOutbound (rawNumber) {
   let digits = String(rawNumber).replace(/\D/g, '');
   if (!digits) return null;
 
-  // garante prefixo 55
   if (!digits.startsWith('55')) {
     digits = '55' + digits;
   }
 
-  // +55 + DDD + número (8 ou 9 dígitos) => 12 ou 13 dígitos
   if (digits.length !== 12 && digits.length !== 13) {
     return null;
   }
@@ -495,27 +496,22 @@ function normalizeContactsArray (list) {
 
   return { valid, invalid };
 }
-// Converte "+5511999999999", "5511999999999" ou "11999999999" em "5511999999999@c.us"
 function normalizeToChatId (rawNumber) {
   if (!rawNumber) return null;
 
-  // tira tudo que não for dígito
   let digits = String(rawNumber).replace(/\D/g, '');
   if (!digits) return null;
 
-  // garante prefixo 55 (Brasil)
   if (!digits.startsWith('55')) {
     digits = '55' + digits;
   }
 
-  // +55 + DDD (2) + número (8 ou 9) => 12 ou 13 dígitos
   if (digits.length !== 12 && digits.length !== 13) {
     return null;
   }
 
   return digits + '@c.us';
 }
-//  inbound
 function markInboundProcessed (doc) {
   const id = doc?._id || doc?.id;
   if (!id) return;
@@ -556,7 +552,6 @@ app.post('/send-text', async (req, res) => {
 });
 
 // === /start-session ===
-// Recebe mongoUri + config OpenAI/IA vindas do painel e inicializa tudo.
 app.post('/start-session', async (req, res) => {
   try {
     if (TOKEN && req.headers['x-token'] !== TOKEN) {
@@ -597,11 +592,10 @@ app.post('/start-session', async (req, res) => {
         AI_METADATA: ai?.AI_METADATA || '',
         BOT_NAME: ai?.BOT_NAME || 'IANO Bot',
         dataItems: Array.isArray(ai?.dataItems) ? ai.dataItems : [],
-        // campos opcionais específicos para visão (caso o front envie)
         AI_VISION_CONTEXT: ai?.AI_VISION_CONTEXT || '',
         AI_VISION_RULES: ai?.AI_VISION_RULES || '',
         AI_VISION_METADATA: ai?.AI_VISION_METADATA || '',
-        AI_VISION_MODE: ai?.AI_VISION_MODE || 'describe' // ex.: 'describe', 'ocr', etc. (livre)
+        AI_VISION_MODE: ai?.AI_VISION_MODE || 'describe'
       }
     };
 
@@ -610,6 +604,51 @@ app.post('/start-session', async (req, res) => {
       runtimeConfig.mongo.uri,
       runtimeConfig.mongo.dbName,
       runtimeConfig.mongo.colName
+    );
+
+    // salva config no Mongo para ser a "verdade" central
+    const now = new Date();
+    const cfgToPersist = {
+      _id: 'default',
+      mongo: {
+        uri: runtimeConfig.mongo.uri,
+        dbName: runtimeConfig.mongo.dbName,
+        colName: runtimeConfig.mongo.colName
+      },
+      openai: {
+        OPENAI_API_KEY: openai.OPENAI_API_KEY,
+        OPENAI_CHAT_MODEL: openai.OPENAI_CHAT_MODEL || 'gpt-4.1-mini',
+        OPENAI_TEMPERATURE: Number(
+          openai.OPENAI_TEMPERATURE !== undefined ? openai.OPENAI_TEMPERATURE : 0.8
+        ),
+        OPENAI_MAX_TOKENS: Number(
+          openai.OPENAI_MAX_TOKENS !== undefined ? openai.OPENAI_MAX_TOKENS : 900
+        ),
+        TRANSCRIBE_MODEL: openai.TRANSCRIBE_MODEL || 'whisper-1'
+      },
+      ai: {
+        IA_CONTEXT_MAX_MINUTES: runtimeConfig.ai.IA_CONTEXT_MAX_MINUTES,
+        HUMAN_HOLD_MS: runtimeConfig.ai.HUMAN_HOLD_MS,
+        AI_CONTEXT: runtimeConfig.ai.AI_CONTEXT,
+        AI_RULES: runtimeConfig.ai.AI_RULES,
+        AI_METADATA: runtimeConfig.ai.AI_METADATA,
+        BOT_NAME: runtimeConfig.ai.BOT_NAME,
+        dataItems: runtimeConfig.ai.dataItems,
+        AI_VISION_CONTEXT: runtimeConfig.ai.AI_VISION_CONTEXT,
+        AI_VISION_RULES: runtimeConfig.ai.AI_VISION_RULES,
+        AI_VISION_METADATA: runtimeConfig.ai.AI_VISION_METADATA,
+        AI_VISION_MODE: runtimeConfig.ai.AI_VISION_MODE
+      },
+      updatedAt: now
+    };
+
+    await configCol.updateOne(
+      { _id: 'default' },
+      {
+        $set: cfgToPersist,
+        $setOnInsert: { createdAt: now }
+      },
+      { upsert: true }
     );
 
     pushLog(
@@ -643,21 +682,18 @@ app.post('/reset-session', async (req, res) => {
 });
 
 // === /token-usage ===
-// Retorna dados agregados de tokens da OpenAI (somente API OpenAI, nada de Mongo DB usage)
 app.get('/token-usage', async (req, res) => {
   try {
     if (TOKEN && req.headers['x-token'] !== TOKEN) {
       return res.status(401).json({ ok: false, error: 'unauthorized' });
     }
 
-    // Key da OpenAI vinda do frontend (localStorage)
     const headerKey = req.headers['x-openai-key'] || '';
     const queryKey = req.query.openaiKey || '';
     const frontendKey = String(headerKey || queryKey || '').trim();
 
-    const range = String(req.query.range || '7d'); // '7d' | '30d' | 'month'
+    const range = String(req.query.range || '7d');
 
-    // se ainda não existe runtimeConfig, não quebra: devolve zerado
     if (!hasRuntimeConfig()) {
       return res.json({
         ok: true,
@@ -692,6 +728,118 @@ app.get('/token-usage', async (req, res) => {
     });
   } catch (err) {
     console.error('/token-usage error', err);
+    return res
+      .status(500)
+      .json({ ok: false, error: err?.message || 'internal error' });
+  }
+});
+
+/**
+ * Config da IA (contexto, regras, catálogo) via Mongo
+ * GET /config/ai -> lê do Mongo
+ * PUT /config/ai -> atualiza Mongo + runtimeConfig.ai em memória (sem resetar sessão)
+ */
+app.get('/config/ai', async (req, res) => {
+  try {
+    if (TOKEN && req.headers['x-token'] !== TOKEN) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
+
+    if (!mongoDb || !configCol) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Sessão ainda não configurada. Use /start-session no painel.'
+      });
+    }
+
+    const doc = await configCol.findOne({ _id: 'default' });
+    if (!doc || !doc.ai) {
+      return res.json({ ok: true, ai: null, dataItems: [] });
+    }
+
+    const ai = doc.ai;
+    const dataItems = Array.isArray(ai.dataItems) ? ai.dataItems : [];
+
+    return res.json({ ok: true, ai, dataItems });
+  } catch (err) {
+    console.error('/config/ai GET error', err);
+    return res
+      .status(500)
+      .json({ ok: false, error: err?.message || 'internal error' });
+  }
+});
+
+app.put('/config/ai', async (req, res) => {
+  try {
+    if (TOKEN && req.headers['x-token'] !== TOKEN) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
+
+    if (!mongoDb || !configCol) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Sessão ainda não configurada. Use /start-session no painel.'
+      });
+    }
+
+    const body = req.body || {};
+    const aiPayload = body.ai || {};
+    const dataItemsPayload = Array.isArray(body.dataItems) ? body.dataItems : aiPayload.dataItems;
+
+    const existing = await configCol.findOne({ _id: 'default' });
+    const currentAi = existing?.ai || {};
+
+    const mergedAi = {
+      ...currentAi,
+      IA_CONTEXT_MAX_MINUTES: Number(
+        aiPayload.IA_CONTEXT_MAX_MINUTES ?? currentAi.IA_CONTEXT_MAX_MINUTES ?? 5
+      ),
+      HUMAN_HOLD_MS: Number(
+        aiPayload.HUMAN_HOLD_MS ?? currentAi.HUMAN_HOLD_MS ?? 300000
+      ),
+      AI_CONTEXT: aiPayload.AI_CONTEXT ?? currentAi.AI_CONTEXT ?? '',
+      AI_RULES: aiPayload.AI_RULES ?? currentAi.AI_RULES ?? '',
+      AI_METADATA: aiPayload.AI_METADATA ?? currentAi.AI_METADATA ?? '',
+      BOT_NAME: aiPayload.BOT_NAME ?? currentAi.BOT_NAME ?? 'IANO Bot',
+      AI_VISION_CONTEXT: aiPayload.AI_VISION_CONTEXT ?? currentAi.AI_VISION_CONTEXT ?? '',
+      AI_VISION_RULES: aiPayload.AI_VISION_RULES ?? currentAi.AI_VISION_RULES ?? '',
+      AI_VISION_METADATA: aiPayload.AI_VISION_METADATA ?? currentAi.AI_VISION_METADATA ?? '',
+      AI_VISION_MODE: aiPayload.AI_VISION_MODE ?? currentAi.AI_VISION_MODE ?? 'describe',
+      dataItems: Array.isArray(dataItemsPayload) ? dataItemsPayload : (currentAi.dataItems || [])
+    };
+
+    const now = new Date();
+
+    await configCol.updateOne(
+      { _id: 'default' },
+      {
+        $set: {
+          ai: mergedAi,
+          updatedAt: now
+        },
+        $setOnInsert: { createdAt: now }
+      },
+      { upsert: true }
+    );
+
+    if (hasRuntimeConfig()) {
+      const currentCfg = getRuntimeConfig();
+      const newCfg = {
+        ...currentCfg,
+        ai: {
+          ...(currentCfg.ai || {}),
+          ...mergedAi,
+          dataItems: mergedAi.dataItems || []
+        }
+      };
+      setRuntimeConfig(newCfg);
+    }
+
+    pushLog('[CONFIG] IA atualizada em tempo real (Mongo + runtime).');
+
+    return res.json({ ok: true, ai: mergedAi });
+  } catch (err) {
+    console.error('/config/ai PUT error', err);
     return res
       .status(500)
       .json({ ok: false, error: err?.message || 'internal error' });
@@ -767,7 +915,7 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
 
   wbus.on('message', async (rec) => {
     try {
-      if (!mongoCol) return; // ainda não configurado via /start-session
+      if (!mongoCol) return;
 
       const doc = {
         _id: rec.id || `${rec.chatId || 'chat'}:${rec.timestamp}`,
@@ -784,7 +932,7 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
             : rec.media && rec.media.mimetype
               ? { mimetype: rec.media.mimetype }
               : null,
-        ack: rec.ack, // status da mensagem (0=enviado, 1=entregue, 2=lida)
+        ack: rec.ack,
         isStatus: !!rec.isStatus,
         timestamp: rec.timestamp || Date.now(),
         createdAt: new Date(rec.timestamp || Date.now())
@@ -800,12 +948,10 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
       await mongoCol.updateOne({ _id: doc._id }, { $set: doc }, { upsert: true });
       await touchChat(doc.chatId, doc.timestamp);
 
-      // SAÍDA (nós): humano → hold imediato e invalida IA em curso/queue
       if (doc.fromMe && doc.body && !doc.hasMedia) {
         if (!(isAIBody(doc.body) || isAiOutboxId(doc) || isAiDraft(doc.chatId, doc.body))) {
           const last = lastAISendAt.get(doc.chatId) || 0;
           if (Date.now() - last < 5000) {
-            // ignora eco imediato da IA
           } else {
             pushLog(`[HUMANO] takeover em ${doc.chatId} — cooldown iniciado`);
             bumpVersion(doc.chatId);
@@ -814,11 +960,9 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
         }
       }
 
-      // ENTRADA (cliente)
       if (!doc.fromMe && !doc.isStatus) {
         const cleanBody = (doc.body || '').trim();
 
-        // Dedupe
         if (wasInboundProcessed(doc)) {
           bus.emit('log', `[ROUTE] inbound duplicado ignorado ${doc.chatId}`);
           return;
@@ -827,7 +971,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
 
         const hasImage = doc.hasMedia && isImagePhoto(doc);
 
-        // 1) se já existe uma imagem pendente e chegou um texto explicando o que fazer
         if (!hasImage && pendingVisionMap.has(doc.chatId)) {
           const pending = pendingVisionMap.get(doc.chatId);
           const ageMs = Date.now() - (pending.createdAt || 0);
@@ -849,12 +992,10 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
             });
             return;
           } else {
-            // expirou ou texto vazio: limpa pendência e segue fluxo normal
             pendingVisionMap.delete(doc.chatId);
           }
         }
 
-        // 2) chegou uma imagem (foto) do usuário
         if (hasImage) {
           if (!aiAllowed(doc.chatId)) {
             bus.emit('log', `[ROUTE] visão bloqueada (HUMANO cooldown) chat=${doc.chatId}`);
@@ -875,7 +1016,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
           }
 
           if (cleanBody) {
-            // legenda já dizendo o que fazer
             await handleDescribeImage({
               doc,
               instruction: cleanBody,
@@ -885,7 +1025,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
             return;
           }
 
-          // NÃO TEM INSTRUÇÃO → pergunta pro usuário e guarda pendente
           pendingVisionMap.set(doc.chatId, {
             filePath,
             mimeType,
@@ -900,7 +1039,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
           return;
         }
 
-        // 3) mídia visual não suportada (vídeo, sticker) ou body vazio
         if (isVisualMedia(doc) || cleanBody === '') {
           bus.emit(
             'log',
@@ -910,14 +1048,12 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
           return;
         }
 
-        // 4) se IA está em cooldown humano
         if (!aiAllowed(doc.chatId)) {
           bus.emit('log', `[ROUTE] IA bloqueada (HUMANO cooldown) chat=${doc.chatId}`);
           bus.emit('human:queue', doc);
           return;
         }
 
-        // 5) fluxo normal de IA (texto)
         const ctx = await getRecentContext(mongoCol, doc.chatId);
         const versionAtStart = getVersion(doc.chatId);
 
@@ -964,7 +1100,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
 
             if (getVersion(doc.chatId) !== versionAtStart || !aiAllowed(doc.chatId)) return;
 
-            // usa o primeiro texto (se existir) pra “simular digitação”
             const firstText =
               typeof msgs[0] === 'string'
                 ? msgs[0]
@@ -979,13 +1114,11 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
               await sleep(estimateTypingMs(firstText));
             }
 
-            // Envia cada mensagem: string, objeto text ou objeto image
             for (let m of msgs) {
               if (getVersion(doc.chatId) !== versionAtStart || !aiAllowed(doc.chatId)) return;
 
               let item = m;
 
-              // segurança extra: se vier string JSON de objeto, tenta parsear aqui também
               if (typeof item === 'string') {
                 const trimmed = item.trim();
                 if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
@@ -994,13 +1127,10 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
                     if (parsed && typeof parsed === 'object' && parsed.type) {
                       item = parsed;
                     }
-                  } catch (_) {
-                    // se der erro, segue como texto normal
-                  }
+                  } catch (_) {}
                 }
               }
 
-              // 1) String simples → texto
               if (typeof item === 'string') {
                 const text = botPrefix(item);
                 markAiDraft(doc.chatId, text);
@@ -1011,11 +1141,9 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
                 continue;
               }
 
-              // 2) Objeto
               if (item && typeof item === 'object') {
                 const type = (item.type || '').toLowerCase();
 
-                // 2.a) Texto via objeto: { type: 'text', text: '...' }
                 if (type === 'text' && item.text) {
                   const text = botPrefix(String(item.text));
                   markAiDraft(doc.chatId, text);
@@ -1026,7 +1154,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
                   continue;
                 }
 
-                // 2.b) Imagem: { type: 'image', url, caption? }
                 if (type === 'image' && item.url) {
                   try {
                     const media = await MessageMedia.fromUrl(String(item.url));
@@ -1044,7 +1171,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
                         err?.message || err
                       }`
                     );
-                    // fallback: manda o link como texto se der erro
                     const fallbackText = botPrefix(
                       `${item.caption || 'Não consegui enviar a imagem, segue o link:'} ${item.url}`
                     );
@@ -1057,7 +1183,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
                 }
               }
 
-              // 3) Qualquer coisa fora do padrão cai aqui como texto
               const text = botPrefix(String(item));
               markAiDraft(doc.chatId, text);
               const sent = await client.sendMessage(doc.chatId, text);
@@ -1084,13 +1209,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
   });
 
   // Envio em massa: texto ou mídia para uma lista de contatos
-  // Body esperado:
-  // {
-  //   "contacts": ["+5511999999999", "+551134567890"],
-  //   "text": "Mensagem opcional",
-  //   "mediaUrl": "https://meuservidor.com/imagem.jpg", // opcional
-  //   "caption": "Legenda opcional para a mídia"        // opcional
-  // }
   app.post('/send-bulk', async (req, res) => {
     try {
       if (TOKEN && req.headers['x-token'] !== TOKEN) {
@@ -1121,7 +1239,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
       let success = 0;
 
       for (const raw of contacts) {
-        // 1) resolve via getNumberId
         const resolved = await resolveChatIdForSend(client, raw);
 
         if (!resolved.ok) {
@@ -1129,7 +1246,7 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
             contact: raw,
             chatId: resolved.chatId,
             ok: false,
-            error: resolved.reason // 'invalid_number_format' | 'not_whatsapp_user'
+            error: resolved.reason
           });
           continue;
         }
@@ -1150,7 +1267,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
           success++;
         } catch (err) {
           const msg = err?.message || '';
-
           let errorCode = 'send_error';
           if (msg.includes('No LID for user')) {
             errorCode = 'no_lid_for_user';
@@ -1212,7 +1328,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
         });
       }
 
-      // contacts vem como string JSON no multipart
       let contactsRaw;
       try {
         if (Array.isArray(contactsField)) {
@@ -1221,7 +1336,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
           contactsRaw = JSON.parse(String(contactsField));
         }
       } catch (e) {
-        // fallback: separa por quebra de linha / vírgula / ponto-e-vírgula
         contactsRaw = String(contactsField)
           .split(/[\n,;]+/)
           .map((s) => s.trim())
@@ -1239,8 +1353,7 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
         throw new Error('WhatsApp não está conectado: ' + (err?.message || err));
       });
 
-      // monta MessageMedia a partir do arquivo salvo pelo multer
-      const filePath = file.path; // exemplo: MEDIA_DIR/xxxxx.jpg
+      const filePath = file.path;
       const mimeType = file.mimetype || 'application/octet-stream';
       const originalName = file.originalname || 'arquivo';
 
@@ -1266,7 +1379,7 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
             raw,
             chatId: resolved.chatId,
             ok: false,
-            error: resolved.reason // aqui corrigido: usa "reason"
+            error: resolved.reason
           });
           failed++;
           continue;
@@ -1307,7 +1420,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
   });
 
   // === GRUPOS DE CONTATOS ===
-  // Cria/atualiza grupo de contatos por label
   app.post('/contact-groups', async (req, res) => {
     try {
       if (TOKEN && req.headers['x-token'] !== TOKEN) {
@@ -1348,7 +1460,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
         let phoneRaw;
 
         if (typeof item === 'string') {
-          // permite só número sem nome
           name = '';
           phoneRaw = item;
         } else {
@@ -1414,7 +1525,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
     }
   });
 
-  // Lista grupos de contatos ou filtra por label (?label=...)
   app.get('/contact-groups', async (req, res) => {
     try {
       if (TOKEN && req.headers['x-token'] !== TOKEN) {
@@ -1447,7 +1557,6 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
     }
   });
 
-  // Remove grupo de contatos por label
   app.delete('/contact-groups/:label', async (req, res) => {
     try {
       if (TOKEN && req.headers['x-token'] !== TOKEN) {

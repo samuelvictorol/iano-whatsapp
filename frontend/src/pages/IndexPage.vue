@@ -8,8 +8,8 @@
         <q-card-section>
           <div class="row items-center justify-between q-col-gutter-md">
             <div class="col-12 col-md-7">
-              <div class="text-h4 text-weight-bold text-white q-mb-xs">
-                IanoWhatsapp
+              <div class="text-h4 text-weight-bold text-white q-mb-xs row items-center">
+                <q-icon name="mdi-whatsapp" class="q-pr-sm"/> IanoWhatsapp
               </div>
               <div class="text-overline text-green-14 doc-pill q-mb-xs">
                 IANO WhatsApp · Open source · Multi-tenant · Plugável
@@ -20,17 +20,17 @@
 
               <div class="text-grey-4">
                 O IanoWhatsapp conecta o WhatsApp Web, OpenAI e os seus sistemas via HTTP.
-                Você controla contexto, regras e integrações direto pelo frontend <br> <strong class="text-green-3">Registre sua chaves OpenAi e Mongo, configure sua I.A e Scaneie seu QRCode Whatsapp, simples assim!</strong>
+                Você controla contexto, regras e integrações direto pelo frontend
               </div>
 
               <div class="row q-mt-md doc-chip-list">
-                <q-chip dense color="accent" text-color="black" icon="bolt">
-                  SDR configurável via painel
+                <q-chip outline color="orange" text-color="black" icon="support_agent">
+                  SDR configurável
                 </q-chip>
-                <q-chip dense outline color="teal-14" text-color="teal-3" icon="graphic_eq">
+                <q-chip outline color="teal-14" text-color="teal-3" icon="graphic_eq">
                   Áudio + Visão (OpenAI)
                 </q-chip>
-                <q-chip dense outline color="blue" text-color="blue-3" icon="cloud_queue">
+                <q-chip outline color="blue" text-color="blue-3" icon="cloud_queue">
                   Pronto para SaaS
                 </q-chip>
               </div>

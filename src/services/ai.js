@@ -4,17 +4,10 @@ const path = require('path');
 
 const { getRuntimeConfig, hasRuntimeConfig } = require('../config/runtime-config');
 const { getOpenAIClient } = require('./openai-client');
-// grava uso de tokens (texto + visão) no Mongo
 const { logTokenUsage } = require('./token-usage');
 
-const OPENAI_TIMEOUT_MS = 20000; // 20s
+const OPENAI_TIMEOUT_MS = 20000;
 
-/**
- * JSON Schema para a resposta SDR.
- * Agora aceita:
- *  - string simples (mensagem de texto)
- *  - objeto { type: "image", url, caption } para mandar imagem pelo WhatsApp
- */
 function buildJsonSchema () {
   return {
     name: 'sdr_response',
@@ -22,8 +15,8 @@ function buildJsonSchema () {
       type: 'object',
       additionalProperties: false,
       properties: {
-        intencao: { type: 'string' },       // livre
-        perfil_cliente: { type: 'string' }, // livre, opcional
+        intencao: { type: 'string' },
+        perfil_cliente: { type: 'string' },
         ia_reply_messages: {
           type: 'array',
           minItems: 1,
@@ -31,11 +24,9 @@ function buildJsonSchema () {
           items: {
             oneOf: [
               {
-                // texto puro
                 type: 'string'
               },
               {
-                // mensagem de imagem com legenda
                 type: 'object',
                 additionalProperties: false,
                 properties: {
@@ -109,10 +100,6 @@ function botPrefix (line) {
   return `*${getBotName()}:* ${t}`;
 }
 
-/**
- * Prompt para TEXTO (SDR / vendas), usando configs do painel
- * Agora inclui URLs de imagens do catálogo e explica como mandar imagem.
- */
 function buildSystemPrompt (cfg) {
   const ctx = cfg.ai?.AI_CONTEXT || '';
   const rules = cfg.ai?.AI_RULES || '';
@@ -129,7 +116,6 @@ function buildSystemPrompt (cfg) {
         const promo = item.promoPrice != null ? `Promo: R$ ${item.promoPrice}` : '';
         const desc = item.description || '';
 
-        // imagens: lista plana de URLs
         let imagesPart = '';
         const images = Array.isArray(item.images)
           ? item.images.map(v => (v || '').trim()).filter(Boolean)
@@ -164,14 +150,14 @@ function buildSystemPrompt (cfg) {
 
   return [
     'Você é um agente de vendas SDR que atende clientes via WhatsApp.',
-    'Às vezes o cliente pode enviar 2 mensagens seguidas; analise se a segunda realmente exige resposta (pode ser só correção de palavra ou um "?" esquecido). Nesses casos, você pode responder apenas a última mensagem relevante.',
+    'Às vezes o cliente pode enviar 2 mensagens seguidas; analise se a segunda realmente exige resposta (pode ser só correção ou um "?" esquecido).',
     'Não fique saudando o cliente o tempo todo. Cumprimente novamente apenas se a mensagem mais recente contiver uma saudação. Caso contrário, seja objetivo.',
     ctx ? '\n[CONTEXTO / PAPEL]\n' + ctx : '',
     rules ? '\n[REGRAS ESPECÍFICAS]\n' + rules : '',
     metadata ? '\n[INFORMAÇÕES ADICIONAIS]\n' + metadata : '',
     catalogSection,
     '\n[FORMATO DA RESPOSTA]\n' +
-      '- Sua resposta DEVE ser apenas um JSON válido, seguindo exatamente o schema fornecido pelo sistema.\n' +
+      '- Sua resposta DEVE ser apenas um JSON válido, seguindo exatamente o schema fornecido.\n' +
       '- "ia_reply_messages" é um array onde cada item pode ser:\n' +
       '  1) Uma string de texto (mensagem normal do WhatsApp).\n' +
       '  2) Um objeto imagem no formato: { "type": "image", "url": "https://...", "caption": "..." }.\n' +
@@ -181,11 +167,6 @@ function buildSystemPrompt (cfg) {
     .trim();
 }
 
-/**
- * Prompt para VISÃO (interpretação de imagem), também usando configs do painel.
- * Usa campos específicos se existirem (AI_VISION_CONTEXT / AI_VISION_RULES / AI_VISION_METADATA),
- * senão cai no AI_CONTEXT / AI_RULES / AI_METADATA padrão.
- */
 function buildVisionPrompt (cfg, userInstruction) {
   const ctxVision =
     cfg.ai?.AI_VISION_CONTEXT ||
@@ -235,9 +216,6 @@ function buildVisionPrompt (cfg, userInstruction) {
   return lines.join('\n').trim();
 }
 
-/**
- * IA de TEXTO (chat SDR)
- */
 async function callAI ({ chatId, text, context_messages }) {
   if (!hasRuntimeConfig()) {
     throw new Error('Configuração da IA não inicializada. Inicie a sessão pelo painel.');
@@ -248,7 +226,6 @@ async function callAI ({ chatId, text, context_messages }) {
 
   const systemPrompt = buildSystemPrompt(cfg);
 
-  // inclui também os dataItems crus no payload do usuário
   const userPayload = {
     chat_id: chatId,
     text: String(text || ''),
@@ -288,10 +265,9 @@ async function callAI ({ chatId, text, context_messages }) {
     resp = await Promise.race([aiPromise, timeoutPromise]);
   } finally {
     clearTimeout(timeoutId);
-    aiPromise.catch(() => {}); // evita unhandled rejection se a corrida já tiver resolvido
+    aiPromise.catch(() => {});
   }
 
-  // Log de tokens (texto)
   try {
     const usage = resp?.usage;
     if (usage) {
@@ -318,7 +294,6 @@ async function callAI ({ chatId, text, context_messages }) {
     };
   }
 
-  // garante array válido
   if (!Array.isArray(parsed.ia_reply_messages) || !parsed.ia_reply_messages.length) {
     parsed.ia_reply_messages = ['Não consegui entender, pode repetir?'];
   }
@@ -330,10 +305,6 @@ async function callAI ({ chatId, text, context_messages }) {
   return parsed;
 }
 
-/**
- * IA de VISÃO (interpretação de imagem)
- * payload: { chatId, filePath, mimeType, userText }
- */
 async function describeImage ({ chatId, filePath, mimeType, userText }) {
   if (!hasRuntimeConfig()) {
     throw new Error('Configuração da IA não inicializada. Inicie a sessão pelo painel.');
@@ -342,7 +313,6 @@ async function describeImage ({ chatId, filePath, mimeType, userText }) {
   const cfg = getRuntimeConfig();
   const openai = getOpenAIClient();
 
-  // precisa ser modelo com visão (gpt-4.1, 4.1-mini, 4o, etc.)
   const model = cfg.openai?.model || 'gpt-4.1-mini';
   const temperature = Number(
     cfg.openai?.temperature !== undefined ? cfg.openai.temperature : 0.7
@@ -350,7 +320,7 @@ async function describeImage ({ chatId, filePath, mimeType, userText }) {
   const maxTokensCfg = Number(
     cfg.openai?.maxTokens !== undefined ? cfg.openai.maxTokens : 400
   );
-  const maxTokens = Math.max(200, Math.min(maxTokensCfg, 800)); // limite mais baixo pra visão
+  const maxTokens = Math.max(200, Math.min(maxTokensCfg, 800));
 
   const systemPrompt = buildVisionPrompt(cfg, userText);
 
@@ -383,7 +353,6 @@ async function describeImage ({ chatId, filePath, mimeType, userText }) {
     max_tokens: maxTokens
   });
 
-  // Log de tokens (visão)
   try {
     const usage = resp?.usage;
     if (usage) {

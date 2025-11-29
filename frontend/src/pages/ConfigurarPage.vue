@@ -1,4 +1,3 @@
-<!-- ConfigurarPage.vue -->
 <template>
   <q-page class="q-pa-md">
     <div class="settings-page">
@@ -9,32 +8,32 @@
 
           <div>
             <div class="text-h5 text-weight-bold text-white q-mb-xs">
-              Configurações
+              ⚙ Configurações
             </div>
 
             <div class="text-grey q-my-sm">
               <span v-if="!sessionStartedOnce">
                 Preencha as configurações obrigatórias de <strong>OpenAI & Mongo</strong> e depois clique em
-                <strong>Resetar sessão</strong> para iniciar o bot.
+                <strong>Nova Sessão</strong> para iniciar o bot.
               </span>
               <span v-else-if="hasPendingChanges">
-                🟡 Detectamos mudanças nas configurações. Clique em <strong>Resetar sessão</strong> para aplicar as
-                mudanças e escanear o QR Code novamente.
+                🟡 Detectamos mudanças em <strong>OpenAI/Mongo</strong>.
+                Clique em <strong>Nova Sessão</strong> para aplicar e escanear o QR Code novamente.
               </span>
               <span v-else>
-                🟢 Sessão ativa. Se precisar, clique em <strong>Resetar sessão</strong> para reiniciar o bot.
+                🟢 Sessão ativa.
               </span>
             </div>
           </div>
 
           <div class="row items-center">
             <!-- Ações de importar/exportar JSON -->
-            <div class="row items-center justify-start">              
+            <div class="row items-center justify-start">
               <q-btn
                 dense
                 outlined
                 icon="download"
-                class="text-primary bg-white text-bold"
+                class="text-primary bg-white"
                 glossy
                 label="Importar"
                 @click="triggerImport"
@@ -51,20 +50,19 @@
                 outlined
                 icon="upload"
                 label="Exportar"
-                class="q-ml-sm text-primary bg-white text-bold"
+                class="q-ml-sm text-primary bg-white"
                 glossy
                 @click="exportConfigToFile"
               />
-
             </div>
           </div>
 
           <div class="w100 row justify-end q-pt-md">
-            <!-- Botão principal: sempre "Resetar sessão" -->
+            <!-- Botão principal: sempre "Nova Sessão" -->
             <q-btn
               :color="mainActionColor"
               glossy
-              icon-right="mdi-play-speed  "
+              icon-right="mdi-play-speed"
               :label="mainActionLabel"
               :loading="startSessionLoading"
               :disable="!canClickMainAction || startSessionLoading"
@@ -86,6 +84,7 @@
             isOpenAIMongoComplete ? 'expansion-header--ok' : 'expansion-header--warn'
           ]"
           expand-icon="expand_more"
+          @update:model-value="val => handleExpand('api', val)"
         >
           <!-- HEADER CUSTOM, sem ícone duplicado -->
           <template #header>
@@ -116,7 +115,7 @@
                 text-color="white"
                 icon="check_circle"
               >
-                Pronto
+                <div v-if="!apiExpanded">Pronto</div>
               </q-chip>
               <q-chip
                 v-else
@@ -126,13 +125,13 @@
                 text-color="amber-1"
                 icon="priority_high"
               >
-                Obrigatório
+                <div v-if="!apiExpanded">Obrigatório</div>
               </q-chip>
             </q-item-section>
           </template>
 
           <q-card-section>
-            <q-form class="q-gutter-md" @submit="saveOpenAIConfig">
+            <q-form class="q-gutter-md" @submit.prevent="saveOpenAIConfig">
               <!-- OPENAI_API_KEY -->
               <q-input
                 class="bg-grey rounded-borders"
@@ -242,15 +241,18 @@
                 <template #append>
                   <q-icon name="help_outline" class="cursor-pointer">
                     <q-tooltip>
-                      String de conexão do banco de dados Mongo.
+                      String de conexão do banco de dados Mongo. Também é usada como "token" de configuração.
                     </q-tooltip>
                   </q-icon>
                 </template>
               </q-input>
 
-              <div class="row justify-end q-gutter-sm q-mt-md">
-                <q-btn flat color="grey" icon="restore" label="Resetar" @click="resetOpenAIConfig" />
-                <q-btn class="bg-positive text-white" icon-right="save" label="Salvar" type="submit" />
+              <!-- AÇÕES STICKY -->
+              <div class="sticky-actions">
+                <div class="row justify-end q-gutter-sm q-mt-md">
+                  <q-btn flat color="grey" icon="restore" label="Resetar" @click="resetOpenAIConfig" />
+                  <q-btn class="bg-positive text-white" icon-right="save" label="Salvar" type="submit" />
+                </div>
               </div>
             </q-form>
           </q-card-section>
@@ -268,6 +270,7 @@
             isAIConfigComplete ? 'expansion-header--ok' : 'expansion-header--neutral'
           ]"
           expand-icon="expand_more"
+          @update:model-value="val => handleExpand('ai', val)"
         >
           <template #header>
             <q-item-section avatar>
@@ -281,7 +284,7 @@
                 Configurações da IA
               </div>
               <div v-if="aiExpanded" class="text-caption text-grey-6">
-                Contexto, cooldown humano, nome do bot e prompts.
+                Contexto, cooldown humano, nome do bot e prompts. Salvos em banco e aplicados em tempo real.
               </div>
             </q-item-section>
 
@@ -293,7 +296,7 @@
                 text-color="white"
                 icon="check_circle"
               >
-                Pronto
+                <div v-if="!aiExpanded">Pronto</div>
               </q-chip>
               <q-chip
                 v-else
@@ -309,7 +312,7 @@
           </template>
 
           <q-card-section>
-            <q-form class="q-gutter-md" @submit="saveAIConfig">
+            <q-form class="q-gutter-md" @submit.prevent="saveAIConfig">
               <!-- BOT_NAME -->
               <q-input
                 class="bg-grey rounded-borders"
@@ -422,9 +425,18 @@
                 </template>
               </q-input>
 
-              <div class="row justify-end q-gutter-sm q-mt-md">
-                <q-btn flat color="grey" icon="restore" label="Resetar" @click="resetAIConfig" />
-                <q-btn class="bg-positive text-white" icon-right="save" label="Salvar" type="submit" />
+              <!-- AÇÕES STICKY -->
+              <div class="sticky-actions">
+                <div class="row justify-end q-gutter-sm q-mt-md">
+                  <q-btn flat color="grey" icon="restore" label="Resetar" @click="resetAIConfig" />
+                  <q-btn
+                    class="bg-positive text-white"
+                    icon-right="save"
+                    label="Salvar"
+                    type="submit"
+                    :loading="savingAI"
+                  />
+                </div>
               </div>
             </q-form>
           </q-card-section>
@@ -442,6 +454,7 @@
             hasDataItems ? 'expansion-header--ok' : 'expansion-header--neutral'
           ]"
           expand-icon="expand_more"
+          @update:model-value="val => handleExpand('data', val)"
         >
           <template #header>
             <q-item-section avatar>
@@ -467,7 +480,7 @@
                 text-color="white"
                 icon="check_circle"
               >
-                {{ dataItems.length }} item(s)
+                <div v-if="!dataExpanded">{{ dataItems.length }} item(s)</div>
               </q-chip>
               <q-chip
                 v-else
@@ -477,13 +490,13 @@
                 text-color="grey"
                 icon="info"
               >
-                Opcional
+                <div v-if="!dataExpanded">Opcional</div>
               </q-chip>
             </q-item-section>
           </template>
 
           <q-card-section>
-            <q-form class="q-gutter-md" @submit="addDataItem">
+            <q-form class="q-gutter-md" @submit.prevent="addDataItem">
               <div class="row q-col-gutter-sm">
                 <div class="col-12 col-md-6">
                   <!-- Título -->
@@ -548,7 +561,7 @@
                   <div class="row items-center justify-between q-mb-xs">
                     <q-btn
                       dense
-                      class="q-mx-xs text-secondary bg-blue text-white"
+                      class="q-mx-xs text-secondary text-white" outline
                       icon="add_photo_alternate"
                       label="Adicionar imagem"
                       @click="addImageInput"
@@ -653,15 +666,24 @@
                 </div>
               </div>
 
-              <div class="row justify-end q-gutter-sm q-mt-md">
-                <q-btn
-                  flat
-                  color="grey"
-                  icon="delete_sweep"
-                  label="Limpar itens"
-                  @click="clearDataItems"
-                />
-                <q-btn class="bg-positive text-white" icon-right="save" label="Salvar" type="submit" />
+              <!-- AÇÕES STICKY -->
+              <div class="sticky-actions">
+                <div class="row justify-end q-gutter-sm q-mt-md">
+                  <q-btn
+                    flat
+                    color="grey"
+                    icon="delete_sweep"
+                    label="Limpar itens"
+                    @click="clearDataItems"
+                  />
+                  <q-btn
+                    class="bg-positive text-white"
+                    icon-right="add_circle"
+                    label="Adicionar item"
+                    type="submit"
+                    :loading="savingData"
+                  />
+                </div>
               </div>
             </q-form>
 
@@ -677,13 +699,26 @@
                   clickable
                   class="text-teal"
                 >
-                  <q-img
-                    :src="normalizedImages(item)[index]"
-                    :alt="item.title || 'Prévia'"
-                    class="rounded-borders q-mr-sm"
-                    width="80px"
-                    height="80px"
-                  />
+                  <div class="q-mr-sm">
+                    <q-img
+                      v-if="normalizedImages(item).length"
+                      :src="normalizedImages(item)[0]"
+                      :alt="item.title || 'Prévia'"
+                      class="rounded-borders"
+                      width="80px"
+                      height="80px"
+                      :ratio="1"
+                    />
+                    <q-avatar
+                      v-else
+                      rounded
+                      size="80px"
+                      icon="image_not_supported"
+                      color="grey-9"
+                      text-color="grey-3"
+                    />
+                  </div>
+
                   <q-item-section>
                     <q-item-label class="text-weight-medium">
                       {{ item.title || 'Sem título' }}
@@ -737,16 +772,36 @@ const STORAGE_KEYS = {
   sessionStarted: 'config_session_started',
   lastApplied: 'config_last_applied'
 };
+const isMobile = computed(() => $q.screen.lt.md);
 
 // Estados de expansão dos cards
 const apiExpanded = ref(false);
 const aiExpanded = ref(false);
 const dataExpanded = ref(false);
 
+// garante que só um expansion fique aberto por vez
+const handleExpand = (section, val) => {
+  if (!val) return; // se estiver fechando, não faz nada
+  if (section === 'api') {
+    aiExpanded.value = false;
+    dataExpanded.value = false;
+  } else if (section === 'ai') {
+    apiExpanded.value = false;
+    dataExpanded.value = false;
+  } else if (section === 'data') {
+    apiExpanded.value = false;
+    aiExpanded.value = false;
+  }
+};
+
 // --- CONTROLES GERAIS DE SESSÃO ---
 const startSessionLoading = ref(false);
 const sessionStartedOnce = ref(false);
 const lastAppliedConfig = ref(''); // JSON string do último config aplicado de fato
+
+// Loading de salvar IA / Dados no backend
+const savingAI = ref(false);
+const savingData = ref(false);
 
 // File input para importar JSON
 const fileInput = ref(null);
@@ -803,25 +858,15 @@ const previewImages = computed(() => {
 });
 
 // --------- Utilitários de snapshot de config ---------
+// Agora o snapshot SÓ considera campos que exigem reset de sessão (OpenAI/Mongo)
 function buildConfigSnapshot() {
   return {
-    openai: {
-      OPENAI_API_KEY: openaiApiKey.value,
-      OPENAI_CHAT_MODEL: openaiChatModel.value,
-      OPENAI_TEMPERATURE: openaiTemperature.value,
-      OPENAI_MAX_TOKENS: openaiMaxTokens.value,
-      TRANSCRIBE_MODEL: openaiTranscribeModel.value,
-      MONGO_CONNECTION_STRING: mongoConnectionString.value
-    },
-    ai: {
-      IA_CONTEXT_MAX_MINUTES: Number(iaContextMinutes.value) || 0,
-      HUMAN_HOLD_MS: Number(humanHoldMs.value) || 0,
-      AI_CONTEXT: aiContext.value,
-      AI_RULES: aiRules.value,
-      AI_METADATA: aiMetadata.value,
-      BOT_NAME: botName.value || 'IANO Bot'
-    },
-    data: Array.isArray(dataItems.value) ? dataItems.value : []
+    OPENAI_API_KEY: openaiApiKey.value,
+    OPENAI_CHAT_MODEL: openaiChatModel.value,
+    OPENAI_TEMPERATURE: openaiTemperature.value,
+    OPENAI_MAX_TOKENS: openaiMaxTokens.value,
+    TRANSCRIBE_MODEL: openaiTranscribeModel.value,
+    MONGO_CONNECTION_STRING: mongoConnectionString.value
   };
 }
 
@@ -850,25 +895,134 @@ const hasDataItems = computed(() => dataItems.value.length > 0);
 const isRequiredConfigFilled = computed(() => isOpenAIMongoComplete.value);
 
 // computed se há mudanças pendentes em relação ao último snapshot aplicado
+// (apenas OpenAI & Mongo)
 const hasPendingChanges = computed(() => {
   if (!sessionStartedOnce.value || !lastAppliedConfig.value) return false;
   const current = JSON.stringify(buildConfigSnapshot());
   return current !== lastAppliedConfig.value;
 });
 
-// Estado do botão principal (sempre "Resetar sessão", mas com cores diferentes)
-const mainActionLabel = computed(() => 'Resetar sessão');
+// Estado do botão principal (sempre "Nova Sessão", mas com cores diferentes)
+const mainActionLabel = computed(() => 'Nova Sessão');
 
 const mainActionColor = computed(() => {
   if (!isRequiredConfigFilled.value) return 'grey-7';
   if (!sessionStartedOnce.value) return 'green-14';   // primeira vez
-  if (hasPendingChanges.value) return 'orange-5';    // tem mudança pendente
-  return 'green-14';                                 // sessão ativa, mas reset sempre possível
+  if (hasPendingChanges.value) return 'orange-5';    // tem mudança pendente em OpenAI/Mongo
+  return 'grey';                                     // sessão ativa, mas reset sempre possível
 });
 
 const canClickMainAction = computed(() => {
   return isRequiredConfigFilled.value;
 });
+
+const syncAIAndDataToBackend = async (showSuccess = true) => {
+  // monta payload no MESMO padrão do localStorage / exportConfigToFile
+  const payload = {
+    openai: {
+      OPENAI_API_KEY: openaiApiKey.value,
+      OPENAI_CHAT_MODEL: openaiChatModel.value,
+      OPENAI_TEMPERATURE: openaiTemperature.value,
+      OPENAI_MAX_TOKENS: openaiMaxTokens.value,
+      TRANSCRIBE_MODEL: openaiTranscribeModel.value,
+      MONGO_CONNECTION_STRING: mongoConnectionString.value
+    },
+    ai: {
+      IA_CONTEXT_MAX_MINUTES: Number(iaContextMinutes.value) || 0,
+      HUMAN_HOLD_MS: Number(humanHoldMs.value) || 0,
+      AI_CONTEXT: aiContext.value,
+      AI_RULES: aiRules.value,
+      AI_METADATA: aiMetadata.value,
+      BOT_NAME: botName.value || 'IANO Bot'
+    },
+    data: Array.isArray(dataItems.value) ? dataItems.value : []
+  };
+
+  try {
+    const { data } = await api.post('/config/ai', payload);
+    if (!data?.ok) {
+      throw new Error(data?.error || 'Falha ao salvar configuração no banco');
+    }
+
+    if (showSuccess) {
+      $q.notify({
+        color: 'green',
+        icon: 'save',
+        position: 'top',
+        message: 'Configurações de IA e catálogo salvas no banco. Aplicação em tempo real.'
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    $q.notify({
+      type: 'negative',
+      position: 'top',
+      message: 'Erro ao salvar configurações de IA no banco: ' + (err?.message || '')
+    });
+  }
+};
+
+const loadAIAndDataFromBackend = async () => {
+  try {
+    const { data } = await api.get('/config/ai');
+
+    if (data?.ok && data.config) {
+      const cfg = data.config;
+
+      // openai (opcional: se quiser sincronizar do backend pro front)
+      if (cfg.openai) {
+        const o = cfg.openai;
+        openaiApiKey.value = o.OPENAI_API_KEY || openaiApiKey.value;
+        openaiChatModel.value = o.OPENAI_CHAT_MODEL || openaiChatModel.value;
+        openaiTemperature.value = o.OPENAI_TEMPERATURE ?? openaiTemperature.value;
+        openaiMaxTokens.value = o.OPENAI_MAX_TOKENS ?? openaiMaxTokens.value;
+        openaiTranscribeModel.value = o.TRANSCRIBE_MODEL || openaiTranscribeModel.value;
+        mongoConnectionString.value = o.MONGO_CONNECTION_STRING || mongoConnectionString.value;
+
+        // também reflete no localStorage
+        const openaiPayload = {
+          OPENAI_API_KEY: openaiApiKey.value,
+          OPENAI_CHAT_MODEL: openaiChatModel.value,
+          OPENAI_TEMPERATURE: openaiTemperature.value,
+          OPENAI_MAX_TOKENS: openaiMaxTokens.value,
+          TRANSCRIBE_MODEL: openaiTranscribeModel.value,
+          MONGO_CONNECTION_STRING: mongoConnectionString.value
+        };
+        localStorage.setItem(STORAGE_KEYS.openai, JSON.stringify(openaiPayload));
+      }
+
+      // ai
+      if (cfg.ai) {
+        const a = cfg.ai;
+        iaContextMinutes.value = a.IA_CONTEXT_MAX_MINUTES ?? iaContextMinutes.value;
+        humanHoldMs.value = a.HUMAN_HOLD_MS ?? humanHoldMs.value;
+        aiContext.value = a.AI_CONTEXT || aiContext.value;
+        aiRules.value = a.AI_RULES || aiRules.value;
+        aiMetadata.value = a.AI_METADATA || aiMetadata.value;
+        botName.value = a.BOT_NAME || botName.value || 'IANO Bot';
+      }
+
+      // data
+      if (Array.isArray(cfg.data)) {
+        dataItems.value = cfg.data;
+      }
+
+      // cacheia IA + data no localStorage
+      const aiPayload = {
+        IA_CONTEXT_MAX_MINUTES: iaContextMinutes.value,
+        HUMAN_HOLD_MS: humanHoldMs.value,
+        AI_CONTEXT: aiContext.value,
+        AI_RULES: aiRules.value,
+        AI_METADATA: aiMetadata.value,
+        BOT_NAME: botName.value
+      };
+      localStorage.setItem(STORAGE_KEYS.ai, JSON.stringify(aiPayload));
+      localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(dataItems.value));
+    }
+  } catch (err) {
+    console.error('Erro ao carregar IA/Data do backend', err);
+  }
+};
 
 // --------- LOCALSTORAGE: salvar configs individuais ---------
 const saveOpenAIConfig = () => {
@@ -908,8 +1062,11 @@ const resetOpenAIConfig = () => {
   saveOpenAIConfig();
 };
 
-const saveAIConfig = () => {
+// Agora saveAIConfig também sincroniza com o backend
+const saveAIConfig = async () => {
   try {
+    savingAI.value = true;
+
     const payload = {
       IA_CONTEXT_MAX_MINUTES: Number(iaContextMinutes.value) || 0,
       HUMAN_HOLD_MS: Number(humanHoldMs.value) || 0,
@@ -919,19 +1076,13 @@ const saveAIConfig = () => {
       BOT_NAME: botName.value || 'IANO Bot'
     };
     localStorage.setItem(STORAGE_KEYS.ai, JSON.stringify(payload));
-    $q.notify({
-      color: 'green',
-      position: 'top',
-      icon: 'save',
-      message: 'Configurações da IA salvas no localStorage.'
-    });
+
+    await syncAIAndDataToBackend(true);
   } catch (err) {
     console.error(err);
-    $q.notify({
-      type: 'negative',
-      position: 'top',
-      message: 'Falha ao salvar configurações da IA.'
-    });
+    // notify já é feito dentro de syncAIAndDataToBackend em caso de erro
+  } finally {
+    savingAI.value = false;
   }
 };
 
@@ -942,26 +1093,32 @@ const resetAIConfig = () => {
   aiRules.value = '';
   aiMetadata.value = '';
   botName.value = 'IANO Bot';
-  saveAIConfig();
+
+  const payload = {
+    IA_CONTEXT_MAX_MINUTES: iaContextMinutes.value,
+    HUMAN_HOLD_MS: humanHoldMs.value,
+    AI_CONTEXT: aiContext.value,
+    AI_RULES: aiRules.value,
+    AI_METADATA: aiMetadata.value,
+    BOT_NAME: botName.value
+  };
+  localStorage.setItem(STORAGE_KEYS.ai, JSON.stringify(payload));
+
+  // opcional: também resetar no backend se já tiver mongoUri
+  syncAIAndDataToBackend(false);
 };
 
 // salvar itens
-const persistDataItems = () => {
+const persistDataItems = async (showSuccess = true) => {
   try {
+    savingData.value = true;
     localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(dataItems.value));
-    $q.notify({
-      color: 'green',
-      icon: 'save',
-      position: 'top',
-      message: 'Itens salvos em localStorage (JSON atualizado).'
-    });
+
+    await syncAIAndDataToBackend(showSuccess);
   } catch (err) {
     console.error(err);
-    $q.notify({
-      type: 'negative',
-      position: 'top',
-      message: 'Falha ao salvar itens no localStorage.'
-    });
+  } finally {
+    savingData.value = false;
   }
 };
 
@@ -980,7 +1137,7 @@ const removeImageInput = (index) => {
   }
 };
 
-const addDataItem = () => {
+const addDataItem = async () => {
   const imagesArray = Array.isArray(newItem.value.images)
     ? newItem.value.images
         .map(v => (v || '').trim())
@@ -1018,17 +1175,23 @@ const addDataItem = () => {
     category: ''
   };
 
-  persistDataItems();
+  await persistDataItems(true);
 };
 
-const removeDataItem = (index) => {
+const removeDataItem = async (index) => {
   dataItems.value.splice(index, 1);
-  persistDataItems();
+  await persistDataItems(false);
+  $q.notify({
+    color: 'green',
+    icon: 'delete',
+    position: 'top',
+    message: 'Item removido e configurações atualizadas no banco.'
+  });
 };
 
-const clearDataItems = () => {
+const clearDataItems = async () => {
   dataItems.value = [];
-  persistDataItems();
+  await persistDataItems(true);
 };
 
 // normaliza imagens (aceita string antiga separada por vírgula ou array novo)
@@ -1051,7 +1214,26 @@ function normalizedImages(item) {
 // --------- Exportar / Importar JSON ---------
 const exportConfigToFile = () => {
   try {
-    const snap = buildConfigSnapshot();
+    const snap = {
+      openai: {
+        OPENAI_API_KEY: openaiApiKey.value,
+        OPENAI_CHAT_MODEL: openaiChatModel.value,
+        OPENAI_TEMPERATURE: openaiTemperature.value,
+        OPENAI_MAX_TOKENS: openaiMaxTokens.value,
+        TRANSCRIBE_MODEL: openaiTranscribeModel.value,
+        MONGO_CONNECTION_STRING: mongoConnectionString.value
+      },
+      ai: {
+        IA_CONTEXT_MAX_MINUTES: Number(iaContextMinutes.value) || 0,
+        HUMAN_HOLD_MS: Number(humanHoldMs.value) || 0,
+        AI_CONTEXT: aiContext.value,
+        AI_RULES: aiRules.value,
+        AI_METADATA: aiMetadata.value,
+        BOT_NAME: botName.value || 'IANO Bot'
+      },
+      data: Array.isArray(dataItems.value) ? dataItems.value : []
+    };
+
     const jsonStr = JSON.stringify(snap, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1152,7 +1334,7 @@ const handleFileChange = (evt) => {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const text = String(e.target?.result || '');
       const parsed = JSON.parse(text);
@@ -1175,19 +1357,27 @@ const handleFileChange = (evt) => {
 
       dataItems.value = cfg.data || [];
 
-      // persiste nos storages "clássicos"
+      // persiste local
       saveOpenAIConfig();
-      saveAIConfig();
-      persistDataItems();
+      const aiPayload = {
+        IA_CONTEXT_MAX_MINUTES: iaContextMinutes.value,
+        HUMAN_HOLD_MS: humanHoldMs.value,
+        AI_CONTEXT: aiContext.value,
+        AI_RULES: aiRules.value,
+        AI_METADATA: aiMetadata.value,
+        BOT_NAME: botName.value
+      };
+      localStorage.setItem(STORAGE_KEYS.ai, JSON.stringify(aiPayload));
+      localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(dataItems.value));
 
-      // NÃO atualiza lastApplied aqui, para que hasPendingChanges fique true
-      // até o usuário clicar em "Resetar sessão" e aplicar de fato no backend.
+      // envia pro backend se tiver mongoUri
+      await syncAIAndDataToBackend(false);
 
       $q.notify({
         color: 'green',
         position: 'top',
         icon: 'save',
-        message: 'Configuração importada com sucesso. Clique em "Resetar sessão" para aplicar no bot.'
+        message: 'Configuração importada. Se necessário, clique em "Nova Sessão" para aplicar OpenAI/Mongo.'
       });
     } catch (err) {
       console.error(err);
@@ -1203,7 +1393,7 @@ const handleFileChange = (evt) => {
   reader.readAsText(file);
 };
 
-// --------- Iniciar / Resetar sessão no backend ---------
+// --------- Iniciar / Nova Sessão no backend ---------
 const startSession = async () => {
   if (!isRequiredConfigFilled.value) {
     $q.notify({
@@ -1223,16 +1413,8 @@ const startSession = async () => {
       OPENAI_TEMPERATURE: Number(openaiTemperature.value) || 0.8,
       OPENAI_MAX_TOKENS: Number(openaiMaxTokens.value) || 900,
       TRANSCRIBE_MODEL: openaiTranscribeModel.value || 'whisper-1'
-    },
-    ai: {
-      IA_CONTEXT_MAX_MINUTES: Number(iaContextMinutes.value) || 5,
-      HUMAN_HOLD_MS: Number(humanHoldMs.value) || 300000,
-      AI_CONTEXT: aiContext.value,
-      AI_RULES: aiRules.value,
-      AI_METADATA: aiMetadata.value,
-      BOT_NAME: botName.value || 'IanoBot',
-      dataItems: dataItems.value
     }
+    // IA + data são lidas do banco pelo backend usando mongoUri como token
   };
 
   const wasStarted = sessionStartedOnce.value;
@@ -1246,16 +1428,16 @@ const startSession = async () => {
       try {
         await api.post('/reset-session');
       } catch (e) {
-        console.error('Falha ao resetar sessão antes de iniciar novamente', e);
+        console.error('Falha ao Nova Sessão antes de iniciar novamente', e);
       }
     }
 
     const { data } = await api.post('/start-session', payload);
     if (!data?.ok) {
-      throw new Error(data?.error || 'Erro ao iniciar sessão.');
+      throw new Error(data?.error || 'Erro ao Nova Sessão.');
     }
 
-    // Marca sessão como iniciada e salva snapshot aplicado
+    // Marca sessão como iniciada e salva snapshot aplicado (somente OpenAI/Mongo)
     sessionStartedOnce.value = true;
     localStorage.setItem(STORAGE_KEYS.sessionStarted, '1');
     setSnapshotAsLastApplied();
@@ -1264,7 +1446,7 @@ const startSession = async () => {
     if (!wasStarted) {
       msg = 'Sessão iniciada! Escaneie o QR Code para conectar o WhatsApp.';
     } else if (hadPendingChanges) {
-      msg = 'Sessão resetada e mudanças aplicadas! Escaneie o QR Code novamente.';
+      msg = 'Sessão resetada e mudanças de OpenAI/Mongo aplicadas! Escaneie o QR Code novamente.';
     } else {
       msg = 'Sessão resetada! Escaneie o QR Code novamente.';
     }
@@ -1289,8 +1471,8 @@ const startSession = async () => {
   }
 };
 
-// --- Carrega dados do localStorage ao montar ---
-onMounted(() => {
+// --- Carrega dados do localStorage e backend ao montar ---
+onMounted(async () => {
   try {
     const rawOpenai = localStorage.getItem(STORAGE_KEYS.openai);
     if (rawOpenai) {
@@ -1333,8 +1515,13 @@ onMounted(() => {
       // se nunca teve snapshot salvo, considera o atual como base
       setSnapshotAsLastApplied();
     }
+
+    // Tenta sobrescrever IA + data com o que estiver no banco
+    if (mongoConnectionString.value) {
+      await loadAIAndDataFromBackend();
+    }
   } catch (err) {
-    console.error('Erro ao carregar configs do localStorage', err);
+    console.error('Erro ao carregar configs iniciais', err);
   }
 });
 </script>
@@ -1387,5 +1574,22 @@ onMounted(() => {
 /* esconde input de upload */
 .hidden {
   display: none;
+}
+
+/* barra sticky dos botões de ação (mobile + desktop) */
+.sticky-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 12px;
+  margin-top: 8px;
+  /* gradiente pra dar sensação de sobrepor o conteúdo que fica por trás */
+  background: linear-gradient(
+    to top,
+    #151515,
+    #15151579,
+    transparent
+  );
+  backdrop-filter: blur(12px);
 }
 </style>

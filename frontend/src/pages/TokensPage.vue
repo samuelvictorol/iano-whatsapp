@@ -19,7 +19,7 @@
         <div class="row items-center justify-between q-gutter-sm q-pt-md">
           <div>
             <div class="text-h5 text-weight-bold text-white q-mb-xs">
-              Wallet de Tokens
+              💳 Wallet de Tokens
             </div>
             <div class="text-grey-4">
               Acompanhe o consumo de tokens da sua OpenAI API KEY e o custo aproximado em dólar e real.

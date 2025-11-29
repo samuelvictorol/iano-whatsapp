@@ -78,7 +78,6 @@ function getClient () {
         }
       }
 
-      // chatId correto: se foi a gente que enviou (fromMe), usar msg.to; senão, msg.from
       const chatId = msg.fromMe ? (msg.to || msg.from) : msg.from;
 
       return {
@@ -106,7 +105,6 @@ function getClient () {
       }
     });
 
-    // ESSENCIAL: captura mensagens enviadas pelo próprio número (humano)
     client.on('message_create', async (msg) => {
       try {
         const rec = await toRec(msg);
@@ -126,13 +124,6 @@ function getClient () {
   return clientPromise;
 }
 
-/**
- * Resetar sessão do WhatsApp:
- * - destruir client atual
- * - limpar diretórios de sessão e mídia
- * - recriar pastas
- * - reinicializar cliente (novo QR)
- */
 async function resetSession () {
   bus.emit('log', '[WAPP] Reset de sessão solicitado via painel.');
 
@@ -162,7 +153,6 @@ async function resetSession () {
       }
     }
 
-    // re-inicializa (vai gerar novo QR)
     getClient().catch((e) => {
       bus.emit('log', `[WAPP] erro ao reinicializar após reset: ${e?.message || e}`);
     });

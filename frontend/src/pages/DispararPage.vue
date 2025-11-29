@@ -8,7 +8,7 @@
           <div class="row items-center justify-between q-gutter-sm">
             <div class="col">
               <div class="text-h5 text-weight-bold q-mt-xs">
-                Disparo para múltiplos contatos
+                🚀 Disparo Múltiplos Contatos
               </div>
               <div class="text-grey q-mt-xs">
                 Envie mensagens de texto, imagens ou documentos para grupos de contatos
@@ -381,6 +381,7 @@
               <q-btn
                 unelevated
                 color="accent"
+                glossy
                 :disable="!canSendBulk || bulkLoading"
                 :loading="bulkLoading"
                 :icon-right="bulkMode === 'text' ? 'send' : 'rocket_launch'"
