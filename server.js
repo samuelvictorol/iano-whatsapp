@@ -13,10 +13,12 @@ const { transcribeAudioLocal } = require('./src/services/transcribe');
 const { getRecentContext } = require('./src/utils/context');
 const { getClient, bus: wbus, resetSession, MEDIA_DIR } = require('./whatsapp');
 const {
-  setRuntimeConfig,
+  initRuntimeConfig,
+  mergeRuntimeConfig,
   getRuntimeConfig,
   hasRuntimeConfig
 } = require('./src/config/runtime-config');
+
 const multer = require('multer');
 // serviço que agrega uso de tokens da OpenAI (texto + visão)
 const { getTokenUsageSummary } = require('./src/services/token-usage');
@@ -552,115 +554,56 @@ app.post('/send-text', async (req, res) => {
 });
 
 // === /start-session ===
+// === /start-session ===
 app.post('/start-session', async (req, res) => {
   try {
-    if (TOKEN && req.headers['x-token'] !== TOKEN) {
-      return res.status(401).json({ ok: false, error: 'unauthorized' });
-    }
-
-    const { mongoUri, mongoDbName, mongoColName, openai, ai } = req.body || {};
+    const { mongoUri, openai, ai } = req.body || {};
 
     if (!mongoUri || !openai || !openai.OPENAI_API_KEY) {
-      return res.status(400).json({
-        ok: false,
-        error: 'mongoUri e openai.OPENAI_API_KEY são obrigatórios'
-      });
+      return res.status(400).json({ ok: false, error: 'Config incompleta.' });
     }
 
-    const runtimeConfig = {
-      mongo: {
-        uri: mongoUri,
-        dbName: mongoDbName || DB_NAME,
-        colName: mongoColName || COL_NAME
-      },
-      openai: {
-        apiKey: openai.OPENAI_API_KEY,
-        model: openai.OPENAI_CHAT_MODEL || 'gpt-4.1-mini',
-        temperature: Number(
-          openai.OPENAI_TEMPERATURE !== undefined ? openai.OPENAI_TEMPERATURE : 0.8
-        ),
-        maxTokens: Number(
-          openai.OPENAI_MAX_TOKENS !== undefined ? openai.OPENAI_MAX_TOKENS : 900
-        ),
-        transcribeModel: openai.TRANSCRIBE_MODEL || 'whisper-1'
-      },
-      ai: {
-        IA_CONTEXT_MAX_MINUTES: Number(ai?.IA_CONTEXT_MAX_MINUTES ?? 5),
-        HUMAN_HOLD_MS: Number(ai?.HUMAN_HOLD_MS ?? 300000),
-        AI_CONTEXT: ai?.AI_CONTEXT || '',
-        AI_RULES: ai?.AI_RULES || '',
-        AI_METADATA: ai?.AI_METADATA || '',
-        BOT_NAME: ai?.BOT_NAME || 'IANO Bot',
-        dataItems: Array.isArray(ai?.dataItems) ? ai.dataItems : [],
-        AI_VISION_CONTEXT: ai?.AI_VISION_CONTEXT || '',
-        AI_VISION_RULES: ai?.AI_VISION_RULES || '',
-        AI_VISION_METADATA: ai?.AI_VISION_METADATA || '',
-        AI_VISION_MODE: ai?.AI_VISION_MODE || 'describe'
-      }
+    // 1) Conecta no Mongo
+    await connectMongo(mongoUri);
+
+    // 2) monta openai em formato que o ai.js espera
+    const openaiCfg = {
+      apiKey: openai.OPENAI_API_KEY,
+      model: openai.OPENAI_CHAT_MODEL || 'gpt-4.1-mini',
+      temperature: Number(openai.OPENAI_TEMPERATURE ?? 0.8),
+      maxTokens: Number(openai.OPENAI_MAX_TOKENS ?? 900),
+      transcribeModel: openai.TRANSCRIBE_MODEL || 'whisper-1'
     };
 
-    setRuntimeConfig(runtimeConfig);
-    await connectMongo(
-      runtimeConfig.mongo.uri,
-      runtimeConfig.mongo.dbName,
-      runtimeConfig.mongo.colName
-    );
-
-    // salva config no Mongo para ser a "verdade" central
-    const now = new Date();
-    const cfgToPersist = {
-      _id: 'default',
-      mongo: {
-        uri: runtimeConfig.mongo.uri,
-        dbName: runtimeConfig.mongo.dbName,
-        colName: runtimeConfig.mongo.colName
-      },
-      openai: {
-        OPENAI_API_KEY: openai.OPENAI_API_KEY,
-        OPENAI_CHAT_MODEL: openai.OPENAI_CHAT_MODEL || 'gpt-4.1-mini',
-        OPENAI_TEMPERATURE: Number(
-          openai.OPENAI_TEMPERATURE !== undefined ? openai.OPENAI_TEMPERATURE : 0.8
-        ),
-        OPENAI_MAX_TOKENS: Number(
-          openai.OPENAI_MAX_TOKENS !== undefined ? openai.OPENAI_MAX_TOKENS : 900
-        ),
-        TRANSCRIBE_MODEL: openai.TRANSCRIBE_MODEL || 'whisper-1'
-      },
-      ai: {
-        IA_CONTEXT_MAX_MINUTES: runtimeConfig.ai.IA_CONTEXT_MAX_MINUTES,
-        HUMAN_HOLD_MS: runtimeConfig.ai.HUMAN_HOLD_MS,
-        AI_CONTEXT: runtimeConfig.ai.AI_CONTEXT,
-        AI_RULES: runtimeConfig.ai.AI_RULES,
-        AI_METADATA: runtimeConfig.ai.AI_METADATA,
-        BOT_NAME: runtimeConfig.ai.BOT_NAME,
-        dataItems: runtimeConfig.ai.dataItems,
-        AI_VISION_CONTEXT: runtimeConfig.ai.AI_VISION_CONTEXT,
-        AI_VISION_RULES: runtimeConfig.ai.AI_VISION_RULES,
-        AI_VISION_METADATA: runtimeConfig.ai.AI_VISION_METADATA,
-        AI_VISION_MODE: runtimeConfig.ai.AI_VISION_MODE
-      },
-      updatedAt: now
+    const aiCfg = {
+      IA_CONTEXT_MAX_MINUTES: Number(ai?.IA_CONTEXT_MAX_MINUTES ?? 5),
+      HUMAN_HOLD_MS: Number(ai?.HUMAN_HOLD_MS ?? 300000),
+      AI_CONTEXT: ai?.AI_CONTEXT || '',
+      AI_RULES: ai?.AI_RULES || '',
+      AI_METADATA: ai?.AI_METADATA || '',
+      BOT_NAME: ai?.BOT_NAME || 'IANO Bot',
+      dataItems: Array.isArray(ai?.dataItems) ? ai.dataItems : []
     };
 
-    await configCol.updateOne(
-      { _id: 'default' },
-      {
-        $set: cfgToPersist,
-        $setOnInsert: { createdAt: now }
-      },
-      { upsert: true }
-    );
+    // 3) inicializa runtime-config inteiro
+    initRuntimeConfig({
+      mongoUri,
+      openai: openaiCfg,
+      ai: aiCfg
+    });
 
-    pushLog(
-      `[CONFIG] Sessão iniciada. Mongo conectado e OpenAI configurada (model=${runtimeConfig.openai.model}).`
-    );
+    // 4) inicia o WhatsApp em background (SEM await pra não travar a resposta)
+    getClient().catch((e) => {
+      console.error('[POST /start-session] erro ao iniciar WhatsApp:', e);
+    });
 
+    // responde pro front imediatamente
     return res.json({ ok: true });
   } catch (err) {
-    console.error('/start-session error', err);
+    console.error('[POST /start-session] erro:', err);
     return res
       .status(500)
-      .json({ ok: false, error: err?.message || 'internal error' });
+      .json({ ok: false, error: err?.message || 'Erro ao iniciar sessão' });
   }
 });
 
@@ -694,23 +637,40 @@ app.get('/token-usage', async (req, res) => {
 
     const range = String(req.query.range || '7d');
 
+    // helper pra montar summary zerado
+    const emptySummary = () => ({
+      totalTokensThisRange: 0,
+      spentUsdThisRange: 0,
+      availableUsd: 0,
+      avgCostPer1kTokens: 0
+    });
+
+    // se ainda não tem runtimeConfig, devolve tudo zerado
     if (!hasRuntimeConfig()) {
       return res.json({
         ok: true,
         range,
         daily: [],
-        summary: {
-          totalTokensThisRange: 0,
-          spentUsdThisRange: 0,
-          availableUsd: 0,
-          avgCostPer1kTokens: 0
-        }
+        summary: emptySummary()
       });
     }
 
     const cfg = getRuntimeConfig();
-    const configuredKey = cfg.openai?.apiKey;
+    const configuredKey = cfg.openai?.apiKey || '';
+    const mongoUri = cfg.mongoUri || '';
 
+    // se o runtimeConfig existe mas ainda não tem mongoUri, também devolve zerado
+    // (significa que ninguém chamou /start-session ou /config/ai com MONGO_CONNECTION_STRING)
+    if (!mongoUri) {
+      return res.json({
+        ok: true,
+        range,
+        daily: [],
+        summary: emptySummary()
+      });
+    }
+
+    // se tiver key configurada e o front mandar outra, barra
     if (configuredKey && frontendKey && configuredKey !== frontendKey) {
       return res.status(401).json({
         ok: false,
@@ -718,6 +678,7 @@ app.get('/token-usage', async (req, res) => {
       });
     }
 
+    // aqui sim já temos mongoUri e config consistente
     const result = await getTokenUsageSummary({ range });
 
     return res.json({
@@ -734,115 +695,148 @@ app.get('/token-usage', async (req, res) => {
   }
 });
 
-/**
- * Config da IA (contexto, regras, catálogo) via Mongo
- * GET /config/ai -> lê do Mongo
- * PUT /config/ai -> atualiza Mongo + runtimeConfig.ai em memória (sem resetar sessão)
- */
-app.get('/config/ai', async (req, res) => {
+
+app.post('/config/ai', async (req, res) => {
   try {
-    if (TOKEN && req.headers['x-token'] !== TOKEN) {
-      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    const {
+      openai: openaiBody,
+      ai: aiBody,
+      data: dataBody,
+      mongoUri: legacyMongoUri,
+      dataItems: legacyDataItems
+    } = req.body || {};
+
+    // 1) Descobre o mongoUri a partir de:
+    //    - openai.MONGO_CONNECTION_STRING (novo padrão)
+    //    - mongoUri legado
+    //    - runtimeConfig atual, se já existir
+    let mongoUri = null;
+
+    if (openaiBody && openaiBody.MONGO_CONNECTION_STRING) {
+      mongoUri = String(openaiBody.MONGO_CONNECTION_STRING || '').trim();
     }
 
-    if (!mongoDb || !configCol) {
+    if (!mongoUri && legacyMongoUri) {
+      mongoUri = String(legacyMongoUri || '').trim();
+    }
+
+    if (!mongoUri && hasRuntimeConfig()) {
+      try {
+        const cfg = getRuntimeConfig();
+        if (cfg.mongoUri) {
+          mongoUri = String(cfg.mongoUri || '').trim();
+        }
+      } catch (_) {}
+    }
+
+    if (!mongoUri) {
       return res.status(400).json({
         ok: false,
-        error: 'Sessão ainda não configurada. Use /start-session no painel.'
+        error: 'É necessário informar MONGO_CONNECTION_STRING ou mongoUri.'
       });
     }
 
-    const doc = await configCol.findOne({ _id: 'default' });
-    if (!doc || !doc.ai) {
-      return res.json({ ok: true, ai: null, dataItems: [] });
-    }
+    // 2) Se ainda não tiver runtimeConfig, inicializa
+    if (!hasRuntimeConfig()) {
+      const openaiCfg = openaiBody
+        ? {
+            apiKey: openaiBody.OPENAI_API_KEY || '',
+            model: openaiBody.OPENAI_CHAT_MODEL || 'gpt-4.1-mini',
+            temperature: Number(openaiBody.OPENAI_TEMPERATURE ?? 0.8),
+            maxTokens: Number(openaiBody.OPENAI_MAX_TOKENS ?? 900),
+            transcribeModel: openaiBody.TRANSCRIBE_MODEL || 'whisper-1'
+          }
+        : {};
 
-    const ai = doc.ai;
-    const dataItems = Array.isArray(ai.dataItems) ? ai.dataItems : [];
-
-    return res.json({ ok: true, ai, dataItems });
-  } catch (err) {
-    console.error('/config/ai GET error', err);
-    return res
-      .status(500)
-      .json({ ok: false, error: err?.message || 'internal error' });
-  }
-});
-
-app.put('/config/ai', async (req, res) => {
-  try {
-    if (TOKEN && req.headers['x-token'] !== TOKEN) {
-      return res.status(401).json({ ok: false, error: 'unauthorized' });
-    }
-
-    if (!mongoDb || !configCol) {
-      return res.status(400).json({
-        ok: false,
-        error: 'Sessão ainda não configurada. Use /start-session no painel.'
+      initRuntimeConfig({
+        mongoUri,
+        openai: openaiCfg,
+        ai: {}
       });
     }
 
-    const body = req.body || {};
-    const aiPayload = body.ai || {};
-    const dataItemsPayload = Array.isArray(body.dataItems) ? body.dataItems : aiPayload.dataItems;
+    const cfg = getRuntimeConfig();
 
-    const existing = await configCol.findOne({ _id: 'default' });
-    const currentAi = existing?.ai || {};
+    // 3) Monta o objeto ai + dataItems no padrão interno
+    const dataItems =
+      Array.isArray(dataBody)
+        ? dataBody
+        : Array.isArray(legacyDataItems)
+          ? legacyDataItems
+          : Array.isArray(cfg.ai?.dataItems)
+            ? cfg.ai.dataItems
+            : [];
 
-    const mergedAi = {
-      ...currentAi,
-      IA_CONTEXT_MAX_MINUTES: Number(
-        aiPayload.IA_CONTEXT_MAX_MINUTES ?? currentAi.IA_CONTEXT_MAX_MINUTES ?? 5
-      ),
-      HUMAN_HOLD_MS: Number(
-        aiPayload.HUMAN_HOLD_MS ?? currentAi.HUMAN_HOLD_MS ?? 300000
-      ),
-      AI_CONTEXT: aiPayload.AI_CONTEXT ?? currentAi.AI_CONTEXT ?? '',
-      AI_RULES: aiPayload.AI_RULES ?? currentAi.AI_RULES ?? '',
-      AI_METADATA: aiPayload.AI_METADATA ?? currentAi.AI_METADATA ?? '',
-      BOT_NAME: aiPayload.BOT_NAME ?? currentAi.BOT_NAME ?? 'IANO Bot',
-      AI_VISION_CONTEXT: aiPayload.AI_VISION_CONTEXT ?? currentAi.AI_VISION_CONTEXT ?? '',
-      AI_VISION_RULES: aiPayload.AI_VISION_RULES ?? currentAi.AI_VISION_RULES ?? '',
-      AI_VISION_METADATA: aiPayload.AI_VISION_METADATA ?? currentAi.AI_VISION_METADATA ?? '',
-      AI_VISION_MODE: aiPayload.AI_VISION_MODE ?? currentAi.AI_VISION_MODE ?? 'describe',
-      dataItems: Array.isArray(dataItemsPayload) ? dataItemsPayload : (currentAi.dataItems || [])
+    const safeAi = {
+      ...(cfg.ai || {}),
+      ...(aiBody || {}),
+      dataItems
     };
 
-    const now = new Date();
+    mergeRuntimeConfig({
+      mongoUri,
+      ai: safeAi
+    });
 
-    await configCol.updateOne(
-      { _id: 'default' },
-      {
-        $set: {
-          ai: mergedAi,
-          updatedAt: now
-        },
-        $setOnInsert: { createdAt: now }
-      },
-      { upsert: true }
-    );
-
-    if (hasRuntimeConfig()) {
-      const currentCfg = getRuntimeConfig();
-      const newCfg = {
-        ...currentCfg,
-        ai: {
-          ...(currentCfg.ai || {}),
-          ...mergedAi,
-          dataItems: mergedAi.dataItems || []
-        }
-      };
-      setRuntimeConfig(newCfg);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[POST /config/ai] erro:', err);
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || 'Erro interno ao salvar config de IA'
+    });
+  }
+});
+/**
+ * ROTA: carregar configurações de IA atuais (para preencher o painel)
+ */
+app.get('/config/ai', (req, res) => {
+  try {
+    if (!hasRuntimeConfig()) {
+      return res.json({
+        ok: true,
+        config: null
+      });
     }
 
-    pushLog('[CONFIG] IA atualizada em tempo real (Mongo + runtime).');
+    const cfg = getRuntimeConfig();
+    const ai = cfg.ai || {};
+    const dataItems = Array.isArray(ai.dataItems) ? ai.dataItems : [];
+    const openai = cfg.openai || {};
+    const mongoUri = cfg.mongoUri || '';
 
-    return res.json({ ok: true, ai: mergedAi });
+    const openaiExport = {
+      OPENAI_API_KEY: openai.apiKey || '',
+      OPENAI_CHAT_MODEL: openai.model || '',
+      OPENAI_TEMPERATURE: openai.temperature ?? 0.8,
+      OPENAI_MAX_TOKENS: openai.maxTokens ?? 900,
+      TRANSCRIBE_MODEL: openai.transcribeModel || 'whisper-1',
+      MONGO_CONNECTION_STRING: mongoUri || ''
+    };
+
+    const aiExport = {
+      IA_CONTEXT_MAX_MINUTES: ai.IA_CONTEXT_MAX_MINUTES || 5,
+      HUMAN_HOLD_MS: ai.HUMAN_HOLD_MS || 300000,
+      AI_CONTEXT: ai.AI_CONTEXT || '',
+      AI_RULES: ai.AI_RULES || '',
+      AI_METADATA: ai.AI_METADATA || '',
+      BOT_NAME: ai.BOT_NAME || 'IANO Bot'
+    };
+
+    return res.json({
+      ok: true,
+      config: {
+        openai: openaiExport,
+        ai: aiExport,
+        data: dataItems
+      }
+    });
   } catch (err) {
-    console.error('/config/ai PUT error', err);
-    return res
-      .status(500)
-      .json({ ok: false, error: err?.message || 'internal error' });
+    console.error('[GET /config/ai] erro:', err);
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || 'Erro interno ao buscar config de IA'
+    });
   }
 });
 

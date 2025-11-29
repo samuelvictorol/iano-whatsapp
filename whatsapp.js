@@ -9,8 +9,15 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const bus = new EventEmitter();
 
 const CLIENT_ID = process.env.WWEBJS_CLIENT_ID || 'whatsapp-bot';
+
+// diretórios padrão internos
 const STORE_DIR = process.env.WWEBJS_STORE || path.join(__dirname, 'data', 'wwebjs');
 const MEDIA_DIR = process.env.MEDIA_DIR || path.join(__dirname, 'data', 'media');
+
+// diretórios na RAIZ que você quer limpar no reset
+// (no Docker vira algo como /app/data e /app/.wwebjs_cache)
+const ROOT_DATA_DIR = path.join(__dirname, 'data');
+const ROOT_CACHE_DIR = path.join(__dirname, '.wwebjs_cache');
 
 function ensureDirs () {
   if (!fs.existsSync(STORE_DIR)) fs.mkdirSync(STORE_DIR, { recursive: true });
@@ -140,19 +147,29 @@ async function resetSession () {
     client = null;
     clientPromise = null;
 
-    const dirs = [STORE_DIR, MEDIA_DIR];
+    // Diretórios raiz a limpar (/data e /.wwebjs_cache)
+    const dirs = [
+      ROOT_DATA_DIR,
+      ROOT_CACHE_DIR
+    ];
+
     for (const dir of dirs) {
       try {
         if (fs.existsSync(dir)) {
           fs.rmSync(dir, { recursive: true, force: true });
+          bus.emit('log', `[WAPP] Diretório removido: ${dir}`);
+        } else {
+          bus.emit('log', `[WAPP] Diretório não existe, ignorando: ${dir}`);
         }
-        fs.mkdirSync(dir, { recursive: true });
-        bus.emit('log', `[WAPP] Diretório limpo e recriado: ${dir}`);
       } catch (e) {
         bus.emit('log', `[WAPP] erro ao limpar diretório ${dir}: ${e?.message || e}`);
       }
     }
 
+    // recria estrutura mínima (data/wwebjs, data/media)
+    ensureDirs();
+
+    // reinicializa client para gerar novo QR
     getClient().catch((e) => {
       bus.emit('log', `[WAPP] erro ao reinicializar após reset: ${e?.message || e}`);
     });
