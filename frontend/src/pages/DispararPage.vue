@@ -1,5 +1,10 @@
 <template>
   <q-page class="disparo-page q-pa-md q-pa-lg-md">
+    <q-breadcrumbs class="row w100">
+      <q-breadcrumbs-el class="text-grey" label="Início" icon="home" to="/" />
+      <q-breadcrumbs-el class="text-grey " label="Configurações" icon="settings" to="/configurar" />
+      <q-breadcrumbs-el class="text-green-14 " label="Campanhas" icon="message" to="/disparar" />
+    </q-breadcrumbs>
     <div class="row justify-center q-pt-md">
       <div class="col-12 col-md-10 col-lg-8">
 
@@ -8,7 +13,7 @@
           <div class="row items-center justify-between q-gutter-sm">
             <div class="col">
               <div class="text-h5 text-weight-bold q-mt-xs">
-                Disparo para múltiplos contatos
+                🚀 Campanha com Múltiplos Contatos
               </div>
               <div class="text-grey q-mt-xs">
                 Envie mensagens de texto, imagens ou documentos para grupos de contatos
@@ -21,20 +26,11 @@
         <!-- CARD PRINCIPAL -->
         <q-card class="q-pa-md q-pa-lg-md rounded-borders">
           <div class="col-auto q-mb-md">
-            <q-btn-toggle
-              v-model="contactMode"
-              dense
-              rounded
-              unelevated
-              color="grey"
-              text-color="white"
-              toggle-color="accent"
-              class="bg-grey-10"
-              :options="[
+            <q-btn-toggle v-model="contactMode" dense rounded unelevated color="grey" text-color="white"
+              toggle-color="accent" class="bg-grey-10" :options="[
                 { label: 'ㅤLista manualㅤ', value: 'manual' },
                 { label: 'ㅤGrupo salvoㅤ', value: 'group' }
-              ]"
-            />
+              ]" />
           </div>
 
           <!-- PASSO 1: DESTINATÁRIOS -->
@@ -43,22 +39,10 @@
             <div v-if="contactMode === 'group'" class="q-mt-sm">
               <div class="row items-center q-gutter-sm q-mb-sm">
                 <div class="col">
-                  <q-select
-                    v-model="selectedGroupLabel"
-                    :options="groupOptions"
-                    outlined
-                    dense
-                    emit-value
-                    map-options
-                    popup-content-class="disparo-select-popup"
-                    label="Selecione um grupo de contatos"
-                    :loading="groupsLoading"
-                    :clearable="!!selectedGroupLabel"
-                    use-input
-                    input-debounce="0"
-                    @filter="onFilterGroups"
-                    class="bg-grey rounded-borders"
-                  >
+                  <q-select v-model="selectedGroupLabel" :options="groupOptions" outlined dense emit-value map-options
+                    popup-content-class="disparo-select-popup" label="Selecione um grupo de contatos"
+                    :loading="groupsLoading" :clearable="!!selectedGroupLabel" use-input input-debounce="0"
+                    @filter="onFilterGroups" class="bg-grey rounded-borders">
                     <template #prepend>
                       <q-icon name="groups" />
                     </template>
@@ -66,15 +50,8 @@
                 </div>
 
                 <div class="col-auto">
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    icon="refresh"
-                    color="grey-4"
-                    @click="loadContactGroups"
-                    :loading="groupsLoading"
-                  >
+                  <q-btn flat round dense icon="refresh" color="grey-4" @click="loadContactGroups"
+                    :loading="groupsLoading">
                     <q-tooltip>Recarregar grupos</q-tooltip>
                   </q-btn>
                 </div>
@@ -84,11 +61,8 @@
                 {{ groupsError }}
               </div>
 
-              <q-banner
-                v-if="!groupsLoading && !groups.length"
-                dense
-                class="bg-grey-9 text-grey-4 q-mt-xs rounded-borders"
-              >
+              <q-banner v-if="!groupsLoading && !groups.length" dense
+                class="bg-grey-9 text-grey-4 q-mt-xs rounded-borders">
                 <template #avatar>
                   <q-icon name="info" color="accent" />
                 </template>
@@ -99,11 +73,7 @@
                 </span>
               </q-banner>
 
-              <q-banner
-                v-else-if="selectedGroup"
-                dense
-                class="bg-grey-9 text-grey-3 q-mt-sm rounded-borders"
-              >
+              <q-banner v-else-if="selectedGroup" dense class="bg-grey-9 text-grey-3 q-mt-sm rounded-borders">
                 <template #avatar>
                   <q-icon name="check_circle" color="accent" />
                 </template>
@@ -114,19 +84,11 @@
                   {{ selectedGroup.contacts?.length || 0 }}
                 </span>
                 contato(s).
-                <div
-                  v-if="selectedGroup.contacts && selectedGroup.contacts.length"
-                  class="text-caption text-grey-4 q-mt-xs"
-                >
+                <div v-if="selectedGroup.contacts && selectedGroup.contacts.length"
+                  class="text-caption text-grey-4 q-mt-xs">
                   <div class="q-mt-xs">
-                    <q-chip
-                      v-for="(c, idx) in selectedGroup.contacts"
-                      :key="idx"
-                      dense
-                      color="grey-10"
-                      text-color="grey-2"
-                      class="q-mr-xs q-mb-xs"
-                    >
+                    <q-chip v-for="(c, idx) in selectedGroup.contacts" :key="idx" dense color="grey-10"
+                      text-color="grey-2" class="q-mr-xs q-mb-xs">
                       {{ c.name || c.phone || c.chatId }}
                     </q-chip>
                   </div>
@@ -134,20 +96,10 @@
               </q-banner>
 
               <!-- AÇÕES DO GRUPO SELECIONADO -->
-              <div
-                v-if="selectedGroup"
-                class="row items-center q-mt-sm q-gutter-sm"
-              >
+              <div v-if="selectedGroup" class="row items-center q-mt-sm q-gutter-sm">
                 <div class="col-auto">
-                  <q-btn
-                    outline
-                    dense
-                    color="negative"
-                    icon="delete"
-                    label="Excluir grupo"
-                    :loading="deleteGroupLoading"
-                    @click="confirmDeleteGroup"
-                  />
+                  <q-btn outline dense color="negative" icon="delete" label="Excluir grupo"
+                    :loading="deleteGroupLoading" @click="confirmDeleteGroup" />
                 </div>
                 <div class="col text-caption text-grey-5">
                   A exclusão remove apenas o grupo salvo para disparos.
@@ -171,36 +123,22 @@
                   <q-badge color="primary" outline class="q-mr-xs">
                     Válidos: {{ validContactsCount }}
                   </q-badge>
-                  <q-badge
-                    v-if="invalidContacts.length"
-                    color="negative"
-                    outline
-                  >
+                  <q-badge v-if="invalidContacts.length" color="negative" outline>
                     Inválidos: {{ invalidContacts.length }}
                   </q-badge>
                 </div>
               </div>
 
-              <q-input
-                v-model="bulkForm.contactsRaw"
-                type="textarea"
-                autogrow
-                outlined
-                dense
-                class="bg-grey rounded-borders"
-                placeholder="+5511999999999
+              <q-input v-model="bulkForm.contactsRaw" type="textarea" autogrow outlined dense
+                class="bg-grey rounded-borders" placeholder="+5511999999999
 +5562999999999
-(11) 99999-9999"
-              >
+(11) 99999-9999">
                 <template #prepend>
                   <q-icon name="group" />
                 </template>
               </q-input>
 
-              <div
-                v-if="invalidContacts.length"
-                class="text-caption text-negative q-mt-xs"
-              >
+              <div v-if="invalidContacts.length" class="text-caption text-negative q-mt-xs">
                 Alguns números parecem inválidos (menos de 10 dígitos):
                 <span class="text-grey-3">
                   {{ invalidContacts.join(', ') }}
@@ -209,15 +147,8 @@
 
               <div class="row items-center justify-between q-mt-sm q-gutter-sm">
                 <div class="col-12 col-sm-auto">
-                  <q-btn
-                    outline
-                    dense
-                    color="accent"
-                    icon="save"
-                    label="Salvar grupo"
-                    @click="openSaveGroupDialog"
-                    :disable="parsedContacts.length === 0"
-                  />
+                  <q-btn outline dense color="accent" icon="save" label="Salvar grupo" @click="openSaveGroupDialog"
+                    :disable="parsedContacts.length === 0" />
                 </div>
               </div>
             </div>
@@ -231,12 +162,8 @@
               2. Conteúdo
             </div>
 
-            <q-tabs
-              v-model="bulkMode"
-              dense
-              class="text-grey-3 bg-grey-10 rounded-borders q-mb-sm"
-              indicator-color="accent"
-            >
+            <q-tabs v-model="bulkMode" dense class="text-grey-3 bg-grey-10 rounded-borders q-mb-sm"
+              indicator-color="accent">
               <q-tab name="text" label="Texto" icon="chat_bubble_outline" />
               <q-tab name="upload" label="Upload Arquivo" icon="cloud_upload" />
               <q-tab name="media" label="URL" icon="image" />
@@ -245,16 +172,8 @@
             <q-tab-panels v-model="bulkMode" animated class="bg-transparent">
               <!-- TAB TEXTO -->
               <q-tab-panel name="text" class="q-pa-none q-pt-sm">
-                <q-input
-                  v-model="bulkForm.text"
-                  type="textarea"
-                  autogrow
-                  outlined
-                  dense
-                  class="bg-grey rounded-borders"
-                  label="Mensagem de texto"
-                  placeholder="Ex: Olá! Estamos com uma condição especial para você hoje 🚀"
-                >
+                <q-input v-model="bulkForm.text" type="textarea" autogrow outlined dense class="bg-grey rounded-borders"
+                  label="Mensagem de texto" placeholder="Ex: Olá! Estamos com uma condição especial para você hoje 🚀">
                   <template #prepend>
                     <q-icon name="chat" />
                   </template>
@@ -266,29 +185,16 @@
 
               <!-- TAB MÍDIA POR URL -->
               <q-tab-panel name="media" class="q-pa-none q-pt-sm">
-                <q-input
-                  v-model="bulkForm.mediaUrl"
-                  outlined
-                  dense
-                  class="bg-grey rounded-borders q-mb-sm"
-                  label="URL da imagem ou documento"
-                  placeholder="https://meus-arquivos.com/imagem.jpg"
-                >
+                <q-input v-model="bulkForm.mediaUrl" outlined dense class="bg-grey rounded-borders q-mb-sm"
+                  label="URL da imagem ou documento" placeholder="https://meus-arquivos.com/imagem.jpg">
                   <template #prepend>
                     <q-icon name="link" />
                   </template>
                 </q-input>
 
-                <q-input
-                  v-model="bulkForm.caption"
-                  type="textarea"
-                  autogrow
-                  outlined
-                  dense
-                  class="bg-grey rounded-borders"
-                  label="Legenda (opcional)"
-                  placeholder="Ex: Segue o material da campanha 📎"
-                >
+                <q-input v-model="bulkForm.caption" type="textarea" autogrow outlined dense
+                  class="bg-grey rounded-borders" label="Legenda (opcional)"
+                  placeholder="Ex: Segue o material da campanha 📎">
                   <template #prepend>
                     <q-icon name="notes" />
                   </template>
@@ -302,31 +208,17 @@
 
               <!-- TAB UPLOAD ARQUIVO -->
               <q-tab-panel name="upload" class="q-pa-none q-pt-sm">
-                <q-file
-                  v-model="bulkForm.file"
-                  outlined
-                  dense
-                  class="bg-grey-8 rounded-borders q-mb-sm"
-                  label="Arquivo para enviar (imagem / PDF / etc)"
-                  clearable
-                  use-chips
-                  accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                >
+                <q-file v-model="bulkForm.file" outlined dense class="bg-grey-8 rounded-borders q-mb-sm"
+                  label="Arquivo para enviar (imagem / PDF / etc)" clearable use-chips
+                  accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                   <template #prepend>
                     <q-icon name="attach_file" />
                   </template>
                 </q-file>
 
-                <q-input
-                  v-model="bulkForm.caption"
-                  type="textarea"
-                  autogrow
-                  outlined
-                  dense
-                  class="bg-grey rounded-borders"
-                  label="Legenda (opcional)"
-                  placeholder="Ex: Segue o documento da campanha 🔎"
-                >
+                <q-input v-model="bulkForm.caption" type="textarea" autogrow outlined dense
+                  class="bg-grey rounded-borders" label="Legenda (opcional)"
+                  placeholder="Ex: Segue o documento da campanha 🔎">
                   <template #prepend>
                     <q-icon name="notes" />
                   </template>
@@ -350,10 +242,7 @@
               </div>
               <div class="text-caption">
                 {{ effectiveContacts.length }} contato(s) destinatário(s).
-                <span
-                  v-if="contactMode === 'manual' && invalidContacts.length"
-                  class="text-negative"
-                >
+                <span v-if="contactMode === 'manual' && invalidContacts.length" class="text-negative">
                   {{ invalidContacts.length }} inválido(s).
                 </span>
               </div>
@@ -370,41 +259,22 @@
             </div>
 
             <div class="col-12 col-md-auto text-right q-gutter-sm q-mt-sm q-mt-md-none">
-              <q-btn
-                flat
-                dense
-                color="grey-5"
-                icon="cleaning_services"
-                label="Limpar campos"
-                @click="resetForm"
-              />
-              <q-btn
-                unelevated
-                color="accent"
-                :disable="!canSendBulk || bulkLoading"
-                :loading="bulkLoading"
-                :icon-right="bulkMode === 'text' ? 'send' : 'rocket_launch'"
-                label="Enviar campanha"
-                @click="onSubmitBulk"
-              />
+              <q-btn flat dense color="grey-5" icon="cleaning_services" label="Limpar campos" @click="resetForm" />
+              <q-btn unelevated color="accent" glossy :disable="!canSendBulk || bulkLoading" :loading="bulkLoading"
+                :icon-right="bulkMode === 'text' ? 'send' : 'rocket_launch'" label="Enviar campanha"
+                @click="onSubmitBulk" />
             </div>
           </div>
 
           <!-- Resposta da API -->
           <div v-if="bulkResponse" class="q-mt-lg">
-            <q-expansion-item
-              icon="analytics"
-              label="Resultado da última campanha"
-              header-class="text-grey-2"
-              expand-icon-class="text-grey-4"
-              default-opened
-            >
+            <q-expansion-item icon="analytics" label="Resultado da última campanha" header-class="text-grey-2"
+              expand-icon-class="text-grey-4" default-opened>
               <q-card flat bordered class="q-mt-sm bg-grey-10">
                 <q-card-section class="q-pa-sm">
-                  <pre
-                    class="text-caption text-grey-2"
-                    style="white-space: pre-wrap; max-height: 280px; overflow: auto;"
-                  >{{ formattedBulkResponse }}</pre>
+                  <pre class="text-caption text-grey-2"
+                    style="white-space: pre-wrap; max-height: 280px; overflow: auto;">{{
+          formattedBulkResponse }}</pre>
                 </q-card-section>
               </q-card>
             </q-expansion-item>
@@ -420,40 +290,20 @@
           <div class="text-subtitle1 text-grey-2">
             Salvar grupo de contatos
           </div>
-          <q-btn
-            flat
-            round
-            dense
-            icon="close"
-            color="grey-5"
-            @click="saveGroupDialog = false"
-          />
+          <q-btn flat round dense icon="close" color="grey-5" @click="saveGroupDialog = false" />
         </q-card-section>
 
         <q-card-section class="q-pt-none">
-          <q-input
-            v-model="saveGroupLabel"
-            outlined
-            dense
-            class="bg-grey rounded-borders q-mb-sm"
-            label="Nome do grupo (obrigatório)"
-            placeholder="Ex: Clientes ativos, Leads Outubro, VIPs..."
-          >
+          <q-input v-model="saveGroupLabel" outlined dense class="bg-grey rounded-borders q-mb-sm"
+            label="Nome do grupo (obrigatório)" placeholder="Ex: Clientes ativos, Leads Outubro, VIPs...">
             <template #prepend>
               <q-icon name="label" />
             </template>
           </q-input>
 
-          <q-input
-            v-model="saveGroupDescription"
-            type="textarea"
-            outlined
-            dense
-            autogrow
-            class="bg-grey rounded-borders q-mb-md"
-            label="Descrição do grupo (opcional)"
-            placeholder="Ex: Contatos que aceitaram receber novidades da campanha X."
-          >
+          <q-input v-model="saveGroupDescription" type="textarea" outlined dense autogrow
+            class="bg-grey rounded-borders q-mb-md" label="Descrição do grupo (opcional)"
+            placeholder="Ex: Contatos que aceitaram receber novidades da campanha X.">
             <template #prepend>
               <q-icon name="notes" />
             </template>
@@ -466,36 +316,20 @@
 
           <div class="save-group-list q-mt-sm">
             <q-list dense>
-              <q-item
-                v-for="(c, idx) in saveGroupContactsForm"
-                :key="idx"
-                class="q-px-none"
-              >
+              <q-item v-for="(c, idx) in saveGroupContactsForm" :key="idx" class="q-px-none">
                 <q-item-section>
                   <div class="row q-col-gutter-sm">
                     <div class="col-12 col-sm-5">
-                      <q-input
-                        v-model="c.phone"
-                        dense
-                        outlined
-                        class="bg-grey rounded-borders"
-                        label="Telefone"
-                        placeholder="+5511999999999"
-                      >
+                      <q-input v-model="c.phone" dense outlined class="bg-grey rounded-borders" label="Telefone"
+                        placeholder="+5511999999999">
                         <template #prepend>
                           <q-icon name="phone" />
                         </template>
                       </q-input>
                     </div>
                     <div class="col-12 col-sm-7">
-                      <q-input
-                        v-model="c.name"
-                        dense
-                        outlined
-                        class="bg-grey rounded-borders"
-                        label="Nome (opcional)"
-                        placeholder="Ex: João Silva"
-                      >
+                      <q-input v-model="c.name" dense outlined class="bg-grey rounded-borders" label="Nome (opcional)"
+                        placeholder="Ex: João Silva">
                         <template #prepend>
                           <q-icon name="person" />
                         </template>
@@ -509,22 +343,9 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pt-md">
-          <q-btn
-            flat
-            dense
-            color="grey-5"
-            label="Cancelar"
-            @click="saveGroupDialog = false"
-          />
-          <q-btn
-            unelevated
-            color="accent"
-            :disable="!canSaveGroup || saveGroupLoading"
-            :loading="saveGroupLoading"
-            icon="save"
-            label="Salvar grupo"
-            @click="onSaveGroup"
-          />
+          <q-btn flat dense color="grey-5" label="Cancelar" @click="saveGroupDialog = false" />
+          <q-btn unelevated color="accent" :disable="!canSaveGroup || saveGroupLoading" :loading="saveGroupLoading"
+            icon="save" label="Salvar grupo" @click="onSaveGroup" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -653,7 +474,7 @@ const formattedBulkResponse = computed(() => {
   }
 })
 
-function resetForm () {
+function resetForm() {
   bulkForm.value = {
     contactsRaw: '',
     text: '',
@@ -667,7 +488,7 @@ function resetForm () {
 }
 
 // carregar grupos da API
-async function loadContactGroups () {
+async function loadContactGroups() {
   try {
     groupsLoading.value = true
     groupsError.value = ''
@@ -700,7 +521,7 @@ async function loadContactGroups () {
 }
 
 // filter do q-select (cliente-side apenas)
-function onFilterGroups (val, update) {
+function onFilterGroups(val, update) {
   update(() => {
     if (!val) {
       return
@@ -712,7 +533,7 @@ function onFilterGroups (val, update) {
 }
 
 // confirmar exclusão de grupo
-function confirmDeleteGroup () {
+function confirmDeleteGroup() {
   if (!selectedGroup.value) return
 
   $q.dialog({
@@ -737,7 +558,7 @@ function confirmDeleteGroup () {
 }
 
 // efetivamente excluir grupo
-async function onDeleteGroup () {
+async function onDeleteGroup() {
   if (!selectedGroup.value) return
 
   const label = selectedGroup.value.label
@@ -899,7 +720,7 @@ const onSubmitBulk = async () => {
   }
 }
 
-function formatDate (d) {
+function formatDate(d) {
   try {
     const date = new Date(d)
     if (Number.isNaN(date.getTime())) return ''
@@ -926,7 +747,7 @@ const canSaveGroup = computed(() => {
   return valid.length > 0
 })
 
-function openSaveGroupDialog () {
+function openSaveGroupDialog() {
   if (!parsedContacts.value.length) {
     $q.notify({
       type: 'warning',
@@ -946,7 +767,7 @@ function openSaveGroupDialog () {
   saveGroupDialog.value = true
 }
 
-async function onSaveGroup () {
+async function onSaveGroup() {
   if (!canSaveGroup.value) return
 
   try {
@@ -1047,10 +868,12 @@ code {
   border-radius: 12px;
   border: 1px solid rgba(30, 64, 175, 0.4);
   padding: 4px 10px;
-  background: radial-gradient(
-    circle at top left,
-    rgba(30, 64, 175, 0.25),
-    transparent 60%
-  );
+  background: radial-gradient(circle at top left,
+      rgba(30, 64, 175, 0.25),
+      transparent 60%);
+}
+.q-page {
+  max-width: 1100px;
+  margin: 0 auto;
 }
 </style>

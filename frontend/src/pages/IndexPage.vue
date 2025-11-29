@@ -2,58 +2,60 @@
 <template>
   <q-page class="q-pa-md">
     <div class="doc-page">
-
+      <q-breadcrumbs>
+        <q-breadcrumbs-el class="text-green-14" label="Início" icon="home" to="/" />
+      </q-breadcrumbs>
+      
       <!-- HERO / CABEÇALHO -->
-      <q-card class="q-mb-md shadow section-card doc-hero">
+      <q-card class="q-my-md shadow section-card doc-hero">
         <q-card-section>
           <div class="row items-center justify-between q-col-gutter-md">
+            <!-- COL ESQUERDA: TÍTULO / COPY -->
             <div class="col-12 col-md-7">
-              <div class="text-h4 text-weight-bold text-white q-mb-xs">
-                IanoWhatsapp
+              <div class="text-h4 text-weight-bold text-white q-mb-xs row items-center">
+                <q-icon name="mdi-whatsapp" class="q-pr-sm" /> IanoWhatsapp
               </div>
+
               <div class="text-overline text-green-14 doc-pill q-mb-xs">
                 IANO WhatsApp · Open source · Multi-tenant · Plugável
               </div>
+
               <div class="text-subtitle1 text-grey-3 q-mb-md">
-                Agente de IA para WhatsApp
+                Agente de IA para WhatsApp com painel de configuração, disparos em massa
+                e integrações HTTP plugáveis — atualizando IA e catálogo em tempo real.
               </div>
 
-              <div class="text-grey-4">
-                O IanoWhatsapp conecta o WhatsApp Web, OpenAI e os seus sistemas via HTTP.
-                Você controla contexto, regras e integrações direto pelo frontend <br> <strong class="text-green-3">Registre sua chaves OpenAi e Mongo, configure sua I.A e Scaneie seu QRCode Whatsapp, simples assim!</strong>
+              <div class="text-green-3">
+                A IanoWhatsapp conecta o WhatsApp Web, OpenAI e os seus sistemas via HTTP.
+                Você controla contexto, regras e integrações direto pelo frontend, salva tudo no MongoDB
+                e reaproveita a mesma infraestrutura para vários clientes (multi-tenant).
               </div>
 
               <div class="row q-mt-md doc-chip-list">
-                <q-chip dense color="accent" text-color="black" icon="bolt">
-                  SDR configurável via painel
+                <q-chip outline color="amber" text-color="black" icon="support_agent">
+                  SDR configurável
                 </q-chip>
-                <q-chip dense outline color="teal-14" text-color="teal-3" icon="graphic_eq">
+                <q-chip outline color="teal-14" text-color="teal-3" icon="graphic_eq">
                   Áudio + Visão (OpenAI)
                 </q-chip>
-                <q-chip dense outline color="blue" text-color="blue-3" icon="cloud_queue">
-                  Pronto para SaaS
+                <q-chip outline color="blue" text-color="blue-3" icon="cloud_queue">
+                  API Integrável
+                </q-chip>
+                <q-chip outline color="purple-12" text-color="purple" icon="campaign">
+                  Disparos em massa
                 </q-chip>
               </div>
             </div>
 
+            <!-- COL DIREITA: VÍDEO DEMO / PAYLOAD -->
             <div class="col-12 col-md-5">
-              <div class="doc-code q-mt-sm">
-                <div class="text-green-14 text-caption q-mb-xs">
-                  Exemplo de payload para /start-session
+              <div class="doc-video-wrapper q-mb-md">
+                <div class="text-caption text-grey q-mb-xs">
+                  Demonstração
                 </div>
-                <pre><code>{
-  "mongoUri": "mongodb+srv://...",
-  "openai": {
-    "OPENAI_API_KEY": "sk-...",
-    "OPENAI_CHAT_MODEL": "gpt-4.1-mini"
-  },
-  "ai": {
-    "BOT_NAME": "IANO Bot",
-    "IA_CONTEXT_MAX_MINUTES": 5,
-    "HUMAN_HOLD_MS": 300000
-  }
-}</code></pre>
+                <q-video :ratio="16 / 9" :src="heroVideoUrl" class="doc-video" />
               </div>
+
             </div>
           </div>
         </q-card-section>
@@ -66,10 +68,9 @@
             </div>
             <div class="col-auto">
               <div class="row q-gutter-sm">
-                <q-btn  outline  icon="mdi-github" label="Repositório no GitHub"
-                  class="text-white" @click="openGithub" />
-                <q-btn outline icon-right="mdi-robot-happy-outline" label="Configurar minha I.A" class="text-accent text-weight-bold"
-                  to="/configurar" />
+                <q-btn outline icon="mdi-github" label="Repositório no GitHub" class="text-white" @click="openGithub" />
+                <q-btn outline icon-right="mdi-robot-happy-outline" label="Configurar minha I.A"
+                  class="text-accent text-weight-bold" to="/configurar" />
               </div>
             </div>
           </div>
@@ -98,8 +99,9 @@
                   O que é o IanoWhatsapp?
                 </div>
                 <div class="doc-section-subtitle q-mb-md">
-                  Um engine de automação focado em WhatsApp que centraliza IA, histórico de conversas
-                  e integrações em um único backend em Node.js — pronto para virar seu SaaS.
+                  Um engine de automação focado em WhatsApp que centraliza IA, histórico de conversas,
+                  catálogo de produtos/serviços e integrações HTTP em um único backend em Node.js —
+                  pronto para virar seu SaaS multi-cliente.
                 </div>
 
                 <q-list dense class="doc-list q-py-sm">
@@ -111,7 +113,8 @@
                       <q-item-label class="text-white">Agente de IA plugável</q-item-label>
                       <q-item-label caption class="text-grey q-py-xs">
                         Conecta ao WhatsApp Web via <code>whatsapp-web.js</code>, recebe mensagens,
-                        gerencia cooldown humano e envia o contexto para a OpenAI com regras configuráveis.
+                        gerencia cooldown humano e envia o contexto para a OpenAI com regras configuráveis
+                        por instância (por <code>mongoUri</code>).
                       </q-item-label>
                     </q-item-section>
                   </q-item>
@@ -126,7 +129,8 @@
                       </q-item-label>
                       <q-item-label caption class="text-grey q-py-xs">
                         Cada conversa é guardada por chat, permitindo contexto recente,
-                        tratamento de eco e deduplicação de mensagens.
+                        tratamento de eco, deduplicação de mensagens e tomada de decisão da IA
+                        baseada em histórico.
                       </q-item-label>
                     </q-item-section>
                   </q-item>
@@ -137,10 +141,12 @@
                     </q-item-section>
                     <q-item-section>
                       <q-item-label class="text-white">
-                        Prefixo de IA e persona customizáveis
+                        Prefixo de IA, persona e catálogo dinâmicos
                       </q-item-label>
                       <q-item-label caption class="text-grey q-py-xs">
-                        Configure nome do bot, tom de voz, persona, regras e metadados direto pelo painel.
+                        Configure nome do bot, persona, regras, metadata e catálogo de produtos/serviços
+                        direto pelo painel. Essas configurações são salvas no MongoDB e aplicadas
+                        em tempo real, sem reiniciar o bot.
                       </q-item-label>
                     </q-item-section>
                   </q-item>
@@ -154,8 +160,9 @@
                         Configuração 100% via frontend
                       </q-item-label>
                       <q-item-label caption class="text-grey q-py-xs">
-                        Em vez de poluir o <code>.env</code>, você envia configurações de IA, OpenAI e dados
-                        de negócio pelo painel, em JSON, pronto para multi-tenant.
+                        Em vez de depender de dezenas de variáveis no <code>.env</code>, você envia
+                        configurações de IA, OpenAI e dados de negócio pelo painel. Apenas chaves sensíveis
+                        (API keys, tokens) exigem uma nova sessão.
                       </q-item-label>
                     </q-item-section>
                   </q-item>
@@ -164,36 +171,71 @@
 
               <div class="col-12 col-md-5">
                 <div class="doc-section-title text-subtitle1 text-white q-mb-sm">
-                  Casos de uso
+                  Como funciona na prática?
                 </div>
+                <div class="doc-section-subtitle q-mb-md">
+                  O fluxo de onboarding foi pensado para ser simples e repetível para vários clientes.
+                </div>
+
                 <q-list dense class="doc-list q-py-sm">
+                  <q-item>
+                    <q-item-section avatar>
+                      <q-icon name="looks_one" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label caption class="text-grey q-py-xs">
+                        Cadastre sua <code>OPENAI API KEY</code> e a
+                        <code>MONGO CONNECTION STRING</code> na aba <strong>Configurar</strong>.
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+
+                  <q-item>
+                    <q-item-section avatar>
+                      <q-icon name="looks_two" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label caption class="text-grey q-py-xs">
+                        Configure sua IA (contexto, regras, persona, metadata) e cadastre
+                        produtos/serviços que a IA pode usar para responder e ofertar.
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+
+                  <q-item>
+                    <q-item-section avatar>
+                      <q-icon name="looks_3" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label caption class="text-grey q-py-xs">
+                        Clique em <strong>Nova Sessão</strong>, vá na tela <strong>Iniciar</strong>
+                        e escaneie o QR Code com o WhatsApp. A partir daí, a IA passa a atender automaticamente.
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+
+                  <q-item>
+                    <q-item-section avatar>
+                      <q-icon name="looks_4" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label caption class="text-grey q-py-xs">
+                        Depois de conectado, você pode alterar contexto da IA e catálogo de produtos/serviços
+                        a qualquer momento. O backend lê essas configs do Mongo e aplica em tempo real —
+                        só exige uma nova sessão se mudar API keys/tokens.
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+
                   <q-item>
                     <q-item-section avatar>
                       <q-icon name="campaign" />
                     </q-item-section>
                     <q-item-section>
                       <q-item-label caption class="text-grey q-py-xs">
-                        <strong>SDR de WhatsApp</strong> para captar e qualificar leads 24/7.
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
-                  <q-item>
-                    <q-item-section avatar>
-                      <q-icon name="storefront" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label caption class="text-grey q-py-xs">
-                        <strong>Atendimento automatizado</strong> para lojas, clínicas, agências e produtoras.
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
-                  <q-item>
-                    <q-item-section avatar>
-                      <q-icon name="hub" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label caption class="text-grey q-py-xs">
-                        <strong>Hub de integrações</strong> chamando seus endpoints HTTP a partir da IA.
+                        Use os endpoints de <strong>disparo em massa</strong> para campanhas: promoções,
+                        avisos, follow-up de leads, nutrição de base etc., reaproveitando a mesma sessão
+                        que já atende o dia a dia.
                       </q-item-label>
                     </q-item-section>
                   </q-item>
@@ -203,107 +245,226 @@
           </q-tab-panel>
 
           <!-- FLUXOS -->
-          <q-tab-panel name="fluxos" class="q-pa-md">
+          <q-tab-panel name="fluxos" class="q-pa-md text-white">
             <div class="doc-section-title text-h6 text-white q-mb-xs">
-              Fluxo de mensagens e regras de negócio
+              Fluxos de uso e fluxo interno do sistema
             </div>
             <div class="doc-section-subtitle q-mb-md">
-              Veja o caminho que cada mensagem percorre dentro do IANO WhatsApp — da chegada no
-              WhatsApp Web até a IA e os seus sistemas.
+              Entenda o que acontece tanto do ponto de vista do usuário (cliente final) quanto dentro do engine,
+              desde a mensagem recebida no WhatsApp até a IA e suas integrações HTTP.
             </div>
 
             <div class="doc-code q-mb-md">
-              <pre><code>WhatsApp → Engine IANO → IA OpenAI → Integrações HTTP
+              <pre><code>WhatsApp ⇄ Engine IANO ⇄ IA OpenAI ⇄ Integrações HTTP
               ↘ Disparos em massa & Logs em tempo real</code></pre>
             </div>
 
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-md-6">
+            <q-expansion-item icon="person" label="Fluxo para o usuário (experiência no WhatsApp)"
+              header-class="expansion-header flux-header" expand-icon="expand_more" dense class="q-mb-md text-green-14">
+              <q-card-section>
+                <div class="doc-section-subtitle q-mb-sm">
+                  Esse é o fluxo enxergado pelo cliente que fala com você no WhatsApp.
+                </div>
+
                 <q-list dense class="doc-list q-py-sm">
                   <q-item>
                     <q-item-section avatar>
-                      <q-icon name="download" />
+                      <q-icon name="login" />
                     </q-item-section>
                     <q-item-section>
-                      <q-item-label class="text-white">Entrada</q-item-label>
+                      <q-item-label class="text-white">1. Primeiro contato</q-item-label>
                       <q-item-label caption class="text-grey">
-                        Mensagens chegam do WhatsApp Web via <code>whatsapp-web.js</code>
-                        e são enfileiradas por chat.
+                        O usuário envia uma mensagem via WhatsApp (texto, áudio, imagem ou documento).
                       </q-item-label>
                     </q-item-section>
                   </q-item>
 
                   <q-item>
                     <q-item-section avatar>
-                      <q-icon name="schedule" />
+                      <q-icon name="smart_toy" />
                     </q-item-section>
                     <q-item-section>
-                      <q-item-label class="text-white">Fila & Cooldown</q-item-label>
+                      <q-item-label class="text-white">2. Atendimento automático da IA</q-item-label>
                       <q-item-label caption class="text-grey">
-                        O engine aplica cooldown humano, evita flood de mensagens da IA
-                        e controla concorrência por chat.
+                        A IA responde seguindo o contexto e as regras configuradas, podendo usar
+                        catálogo de produtos/serviços, links, scripts de venda e perguntas de qualificação.
                       </q-item-label>
                     </q-item-section>
                   </q-item>
 
                   <q-item>
                     <q-item-section avatar>
-                      <q-icon name="psychology" />
+                      <q-icon name="person_pin_circle" />
                     </q-item-section>
                     <q-item-section>
-                      <q-item-label class="text-white">IA OpenAI (Texto & Visão)</q-item-label>
+                      <q-item-label class="text-white">3. Tomada pelo humano</q-item-label>
                       <q-item-label caption class="text-grey">
-                        A mensagem é enviada para os modelos de chat/visão da OpenAI com contexto
-                        recente e regras definidas no painel.
+                        Se um humano responder no chat, o engine aplica <code>HUMAN_HOLD_MS</code> e
+                        pausa a IA por um tempo configurável, para não competir com o atendente.
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+
+                  <q-item>
+                    <q-item-section avatar>
+                      <q-icon name="campaign" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label class="text-white">4. Campanhas e follow-up</q-item-label>
+                      <q-item-label caption class="text-grey">
+                        O mesmo número pode enviar campanhas em massa (texto, mídia, PDFs) usando listas
+                        de contatos ou grupos de clientes, mantendo histórico e contexto por chat.
                       </q-item-label>
                     </q-item-section>
                   </q-item>
                 </q-list>
-              </div>
+              </q-card-section>
+            </q-expansion-item>
 
-              <div class="col-12 col-md-6">
-                <q-list dense class="doc-list q-py-sm">
-                  <q-item>
-                    <q-item-section avatar>
-                      <q-icon name="http" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label class="text-white">Integrações HTTP</q-item-label>
-                      <q-item-label caption class="text-grey">
-                        A partir das decisões da IA, o backend pode chamar webhooks/endpoints
-                        para criar leads, abrir chamados, atualizar ERPs etc.
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
+            <q-expansion-item icon="timeline" label="Fluxo interno do sistema (engine, IA e integrações)"
+              header-class="expansion-header flux-header text-amber" expand-icon="expand_more" dense>
+              <q-card-section>
+                <div class="row q-col-gutter-md">
+                  <div class="col-12 col-md-6">
+                    <div class="text-subtitle2 text-green-14 q-mb-sm">
+                      Pipeline de mensagens
+                    </div>
+                    <q-list dense class="doc-list q-py-sm">
+                      <q-item>
+                        <q-item-section avatar>
+                          <q-icon name="download" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-white">1. Entrada</q-item-label>
+                          <q-item-label caption class="text-grey">
+                            Mensagens chegam do WhatsApp Web via <code>whatsapp-web.js</code>
+                            e são roteadas por <code>chatId</code>.
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
 
-                  <q-item>
-                    <q-item-section avatar>
-                      <q-icon name="send" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label class="text-white">Disparos em massa</q-item-label>
-                      <q-item-label caption class="text-grey">
-                        A mesma sessão é reaproveitada para campanhas de texto, imagem ou documentos,
-                        usando listas de contatos ou grupos nomeados.
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
+                      <q-item>
+                        <q-item-section avatar>
+                          <q-icon name="schedule" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-white">2. Fila & cooldown</q-item-label>
+                          <q-item-label caption class="text-grey">
+                            O engine aplica cooldown humano, evita flood de mensagens da IA,
+                            controla concorrência por chat e ignora duplicatas/eco.
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
 
-                  <q-item>
-                    <q-item-section avatar>
-                      <q-icon name="monitor_heart" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label class="text-white">Logs & Monitoramento</q-item-label>
-                      <q-item-label caption class="text-grey">
-                        Eventos e QR-Code são enviados via SSE, permitindo dashboards em tempo real
-                        no frontend Quasar.
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </div>
-            </div>
+                      <q-item>
+                        <q-item-section avatar>
+                          <q-icon name="psychology" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-white">3. Montagem do prompt & contexto</q-item-label>
+                          <q-item-label caption class="text-grey">
+                            Carrega histórico recente do MongoDB respeitando
+                            <code>IA_CONTEXT_MAX_MINUTES</code>, lê configurações de IA e
+                            <code>dataItems</code> do Mongo para aquele <code>mongoUri</code> e monta o
+                            prompt completo (persona, regras, metadata, catálogo) em tempo real.
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <q-item>
+                        <q-item-section avatar>
+                          <q-icon name="auto_awesome" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-white">4. Chamada à OpenAI</q-item-label>
+                          <q-item-label caption class="text-grey">
+                            Envia a requisição para o modelo configurado
+                            (<code>OPENAI_CHAT_MODEL</code>), podendo usar texto, visão e transcrição
+                            de áudio (<code>TRANSCRIBE_MODEL</code>).
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <div class="text-subtitle2 text-green-14 q-mb-sm">
+                      Configuração dinâmica & integrações
+                    </div>
+                    <q-list dense class="doc-list q-py-sm">
+                      <q-item>
+                        <q-item-section avatar>
+                          <q-icon name="settings_suggest" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-white">Configs em tempo real</q-item-label>
+                          <q-item-label caption class="text-grey">
+                            As telas de <strong>Configurações da IA</strong> e
+                            <strong>Produtos e Serviços</strong> salvam dados em
+                            <code>config_ai</code> no Mongo. Ao receber mensagens, o backend sempre lê
+                            a versão mais recente dessas configs, sem reiniciar a sessão.
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <q-item>
+                        <q-item-section avatar>
+                          <q-icon name="vpn_key" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-white">Chaves e tokens</q-item-label>
+                          <q-item-label caption class="text-grey">
+                            Alterar <code>OPENAI_API_KEY</code>, <code>MONGO_CONNECTION_STRING</code>
+                            ou outros tokens sensíveis exige apenas uma nova chamada de
+                            <code>/start-session</code> (via botão “Nova Sessão”). O restante é hot reload.
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <q-item>
+                        <q-item-section avatar>
+                          <q-icon name="http" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-white">Integrações HTTP</q-item-label>
+                          <q-item-label caption class="text-grey">
+                            A partir das decisões da IA, o backend pode chamar webhooks/endpoints
+                            para criar leads, abrir chamados, atualizar ERPs ou CRMs.
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <q-item>
+                        <q-item-section avatar>
+                          <q-icon name="send" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-white">Campanhas e disparos em massa</q-item-label>
+                          <q-item-label caption class="text-grey">
+                            Endpoints de disparo em massa reaproveitam a mesma sessão do WhatsApp,
+                            permitindo enviar textos, imagens ou documentos para listas de contatos
+                            ou grupos nomeados.
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <q-item>
+                        <q-item-section avatar>
+                          <q-icon name="monitor_heart" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-white">Logs & monitoramento</q-item-label>
+                          <q-item-label caption class="text-grey">
+                            Eventos, QR-Code e status de chats são enviados via SSE para o frontend Quasar,
+                            que exibe logs, contagem de takeover humano e estado da IA em tempo real.
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </div>
+                </div>
+              </q-card-section>
+            </q-expansion-item>
           </q-tab-panel>
 
           <!-- API -->
@@ -312,7 +473,8 @@
               Endpoints principais da API
             </div>
             <div class="doc-section-subtitle q-mb-md">
-              A API HTTP é simples e direta para integrar com qualquer backend ou frontend.
+              A API HTTP é simples e direta para integrar com qualquer backend ou frontend. Ideal para
+              plugar em CRMs, ERPs, funis próprios e serviços externos.
             </div>
 
             <q-markup-table dark flat dense class="rounded-borders q-mb-lg">
@@ -327,42 +489,48 @@
                 <tr>
                   <td>POST</td>
                   <td>/start-session</td>
-                  <td>Inicializa a sessão do IANO com MongoDB e OpenAI.</td>
+                  <td>Inicializa a sessão do IANO com MongoDB e OpenAI (gera QR-Code novo).</td>
                 </tr>
                 <tr>
                   <td>POST</td>
                   <td>/reset-session</td>
-                  <td>Limpa a sessão do WhatsApp Web e força novo QR-Code.</td>
+                  <td>Limpa a sessão do WhatsApp Web e força novo QR-Code, mantendo configs no Mongo.</td>
                 </tr>
                 <tr>
                   <td>GET</td>
                   <td>/events</td>
-                  <td>Stream SSE com logs, status e QR em base64.</td>
+                  <td>Stream SSE com logs, status de chats, QR em base64 e informações de takeover.</td>
                 </tr>
                 <tr>
                   <td>POST</td>
                   <td>/send-text</td>
-                  <td>Envio de mensagem simples para um único contato.</td>
+                  <td>Envio de mensagem simples para um único contato (text-only).</td>
                 </tr>
                 <tr>
                   <td>POST</td>
                   <td>/send-bulk</td>
-                  <td>Disparo em massa com texto ou mídia por URL.</td>
+                  <td>
+                    Disparo em massa com texto ou mídia por URL, ideal para campanhas segmentadas
+                    reaproveitando a mesma sessão.
+                  </td>
                 </tr>
                 <tr>
                   <td>POST</td>
                   <td>/send-bulk-upload</td>
-                  <td>Campanhas com upload de arquivos (imagem, PDF, DOCX etc.).</td>
+                  <td>
+                    Campanhas em massa com upload de arquivos (imagem, PDF, DOCX etc.), usando listas
+                    de contatos ou grupos.
+                  </td>
                 </tr>
                 <tr>
                   <td>GET</td>
                   <td>/token-usage</td>
-                  <td>Consumo de tokens da OpenAI da instância atual.</td>
+                  <td>Consumo de tokens da OpenAI da instância atual (respeitando a API KEY configurada).</td>
                 </tr>
                 <tr>
                   <td>GET / POST</td>
                   <td>/contact-groups</td>
-                  <td>Listagem e criação de grupos de contatos nomeados.</td>
+                  <td>Listagem e criação de grupos de contatos nomeados para campanhas.</td>
                 </tr>
               </tbody>
             </q-markup-table>
@@ -396,8 +564,9 @@ Content-Type: application/json
             </div>
 
             <div class="text-caption text-grey-4">
-              A documentação detalhada de cada campo pode ser expandida no próprio painel de
-              configuração (inputs com tooltip).
+              A documentação detalhada de cada campo pode ser explorada direto no painel de
+              configuração (inputs com tooltip) e, se quiser, estendida para expor mais endpoints
+              específicos do seu negócio.
             </div>
           </q-tab-panel>
 
@@ -433,7 +602,7 @@ node server.js</code></pre>
                 <div class="text-caption text-grey-4 q-mt-xs">
                   Depois é só abrir o frontend (Quasar) configurado no projeto, acessar a aba
                   <strong>Configurar</strong>, preencher OpenAI &amp; Mongo e clicar em
-                  <strong>Resetar sessão</strong> para gerar o QR-Code.
+                  <strong>Nova Sessão</strong> para gerar o QR-Code.
                 </div>
               </div>
 
@@ -451,7 +620,7 @@ docker compose up -d --build</code></pre>
                 <div class="text-caption text-grey-4 q-mt-xs">
                   O <code>docker-compose.yml</code> foi pensado para subir o backend e, se configurado,
                   o frontend que consome a API. Depois, é só acessar a URL do painel e operar tudo
-                  via browser.
+                  via browser — inclusive campanhas de disparo em massa e monitoramento de sessão.
                 </div>
               </div>
             </div>
@@ -463,7 +632,7 @@ docker compose up -d --build</code></pre>
               Stack, frameworks e dependências
             </div>
             <div class="doc-section-subtitle q-mb-md">
-              Stack moderna, porém enxuta, focada em produtividade e fácil manutenção.
+              Stack moderna, porém enxuta, focada em produtividade, testes rápidos e fácil manutenção.
             </div>
 
             <div class="row q-col-gutter-md">
@@ -484,7 +653,8 @@ docker compose up -d --build</code></pre>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption class="text-grey-4">MongoDB para mensagens & contexto</q-item-label>
+                      <q-item-label caption class="text-grey-4">MongoDB para mensagens, contexto e
+                        configs</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item>
@@ -499,7 +669,7 @@ docker compose up -d --build</code></pre>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption class="text-grey-4">SSE para logs e QR em tempo real</q-item-label>
+                      <q-item-label caption class="text-grey-4">SSE para logs, QR e status em tempo real</q-item-label>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -517,17 +687,30 @@ docker compose up -d --build</code></pre>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption class="text-grey-4">UX focada em configurar sem mexer em código</q-item-label>
+                      <q-item-label caption class="text-grey-4">
+                        UX focada em configurar sem mexer em código
+                      </q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption class="text-grey-4">Disparos em massa com UI tipo “mini Swagger”</q-item-label>
+                      <q-item-label caption class="text-grey-4">
+                        Disparos em massa com UI tipo “mini Swagger”
+                      </q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption class="text-grey-4">Monitoramento de sessão, QR-Code e filas</q-item-label>
+                      <q-item-label caption class="text-grey-4">
+                        Monitoramento de sessão, QR-Code, filas e takeover humano
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section>
+                      <q-item-label caption class="text-grey-4">
+                        Telas de configuração plugadas no Mongo (hot reload de IA e catálogo)
+                      </q-item-label>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -545,17 +728,23 @@ docker compose up -d --build</code></pre>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption class="text-grey-4">Arquitetura preparada para Render / AWS / VPS</q-item-label>
+                      <q-item-label caption class="text-grey-4">
+                        Arquitetura preparada para Render / AWS / VPS
+                      </q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption class="text-grey-4">Configuração multi-tenant via Mongo + painéis distintos</q-item-label>
+                      <q-item-label caption class="text-grey-4">
+                        Configuração multi-tenant via Mongo + painéis distintos
+                      </q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption class="text-grey-4">Poucas variáveis de ambiente, foco no frontend</q-item-label>
+                      <q-item-label caption class="text-grey-4">
+                        Poucas variáveis de ambiente, foco no frontend para ajustes diários
+                      </q-item-label>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -620,7 +809,7 @@ docker compose up -d --build</code></pre>
             </q-list>
 
             <div class="text-grey-4 q-mt-md">
-              📱 Ideal para: agências, produtoras, lojas, clínicas e qualquer operação que viva de
+              📱 Ideal para: agências, produtoras, lojas, clínicas, escritórios e qualquer operação que viva de
               atendimento via WhatsApp.
             </div>
             <div class="text-green-2 q-mt-sm">
@@ -644,6 +833,9 @@ import { ref } from 'vue'
 
 const activeTab = ref('sobre')
 
+// Substitua pela URL do seu vídeo de demo (YouTube embed ou outro)
+const heroVideoUrl = ref('https://www.youtube.com/embed/SEU_VIDEO_AQUI')
+
 function openGithub() {
   window.open('https://github.com/samuelvictorol/iano-whatsapp', '_blank')
 }
@@ -658,7 +850,6 @@ function openDocOnline() {
   max-width: 1100px;
   margin: 0 auto;
 }
-
 
 /* Deixa filhos dentro do card também transparentes */
 .section-card :deep(.q-tab-panels),
@@ -691,10 +882,10 @@ function openDocOnline() {
   margin-bottom: 8px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #0A0F13;
+  background: #0a0f13;
   border: 1px solid rgba(85, 85, 85, 0.6);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
+    'Liberation Mono', 'Courier New', monospace;
   font-size: 12px;
   line-height: 1.4;
   color: #e5e7eb;
@@ -714,7 +905,7 @@ function openDocOnline() {
 /* Listas internas com leve glass */
 .doc-list {
   border-radius: 12px;
-  background: #0A0F13;
+  background: #0a0f13;
   color: whitesmoke;
   border: 1px solid rgba(70, 70, 70, 0.8);
 }
@@ -723,6 +914,39 @@ function openDocOnline() {
 .doc-tab-panels {
   min-height: 320px;
 }
+
+/* Wrapper de vídeo no hero */
+.doc-video-wrapper {
+  border-radius: 12px;
+  background: #0A0F13;
+  border: 1px solid rgba(75, 75, 75, 0.918);
+  padding: 8px;
+}
+
+.doc-video {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Header dos fluxos com visual glassy */
+.flux-header {
+  margin-top: 4px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.18), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+/* Deixa conteúdo interno transparente pro glass funcionar */
+.section-card :deep(.q-expansion-item__container),
+.section-card :deep(.q-item) {
+  background: transparent;
+}
+
+.section-card :deep(.rounded-borders) {
+  border-radius: 14px;
+}
+
 a {
   text-decoration: none;
 }

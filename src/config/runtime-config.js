@@ -1,37 +1,34 @@
-// src/config/runtime-config.js
-// Configuração dinâmica em memória, populada via /start-session
-
+// config/runtime-config.js
 let runtimeConfig = null;
 
-/**
- * Estrutura esperada:
- * {
- *   mongo:  { uri, dbName, colName },
- *   openai: { apiKey, model, temperature, maxTokens, transcribeModel },
- *   ai: {
- *     IA_CONTEXT_MAX_MINUTES,
- *     HUMAN_HOLD_MS,
- *     AI_CONTEXT,
- *     AI_RULES,
- *     AI_METADATA,
- *     BOT_NAME,
- *     dataItems: [...],
- *
- *     // opcionais para VISÃO (interpretação de imagens)
- *     AI_VISION_CONTEXT,
- *     AI_VISION_RULES,
- *     AI_VISION_METADATA,
- *     AI_VISION_MODE
- *   }
- * }
- */
-function setRuntimeConfig (cfg) {
-  runtimeConfig = cfg || null;
+function initRuntimeConfig (cfg) {
+  // sobrescreve tudo (usado no /start-session)
+  runtimeConfig = { ...(cfg || {}) };
+}
+
+function mergeRuntimeConfig (partial) {
+  // atualiza só partes (usado no /config/ai)
+  if (!runtimeConfig) {
+    runtimeConfig = {};
+  }
+
+  runtimeConfig = {
+    ...runtimeConfig,
+    ...partial,
+    ai: {
+      ...(runtimeConfig.ai || {}),
+      ...(partial.ai || {})
+    },
+    openai: {
+      ...(runtimeConfig.openai || {}),
+      ...(partial.openai || {})
+    }
+  };
 }
 
 function getRuntimeConfig () {
   if (!runtimeConfig) {
-    throw new Error('RUNTIME_CONFIG_NOT_SET');
+    throw new Error('Runtime config ainda não inicializada');
   }
   return runtimeConfig;
 }
@@ -41,7 +38,8 @@ function hasRuntimeConfig () {
 }
 
 module.exports = {
-  setRuntimeConfig,
+  initRuntimeConfig,
+  mergeRuntimeConfig,
   getRuntimeConfig,
   hasRuntimeConfig
 };
