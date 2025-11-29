@@ -1,7 +1,11 @@
 <template>
   <q-page class="q-pa-md">
     <div>
-
+      <q-breadcrumbs>
+        <q-breadcrumbs-el class="text-grey" label="Início" icon="home" to="/" />
+        <q-breadcrumbs-el class="text-grey " label="Configurações" icon="settings" to="/configurar" />
+        <q-breadcrumbs-el class="text-green-14 " label="Tokens" icon="token" to="/tokens" />
+      </q-breadcrumbs>
       <!-- Banner de erro -->
       <div v-if="errorMessage" class="q-mb-md">
         <q-banner dense rounded class="bg-red-10 text-red-2">
@@ -26,21 +30,11 @@
             </div>
 
             <div class="q-mt-sm text-grey-5">
-              <q-badge
-                v-if="hasRealData"
-                color="green-14"
-                text-color="black"
-                class="q-mr-sm text-bold"
-              >
+              <q-badge v-if="hasRealData" color="green-14" text-color="black" class="q-mr-sm text-bold">
                 Dados reais
               </q-badge>
 
-              <q-badge
-                v-else
-                color="grey-7"
-                text-color="grey-1"
-                class="q-mr-sm"
-              >
+              <q-badge v-else color="grey-7" text-color="grey-1" class="q-mr-sm">
                 Ainda sem uso registrado
               </q-badge>
 
@@ -64,16 +58,8 @@
 
             <!-- Filtro de período -->
             <div class="q-mt-sm">
-              <q-btn-toggle
-                v-model="range"
-                :options="rangeOptions"
-                dense
-                toggle-color="accent"
-                color="grey-9"
-                text-color="grey-1"
-                size="md"
-                @update:model-value="onChangeRange"
-              />
+              <q-btn-toggle v-model="range" :options="rangeOptions" dense toggle-color="primary" color="grey-9"
+                text-color="grey-1" size="md" @update:model-value="onChangeRange" />
             </div>
           </div>
         </div>
@@ -172,11 +158,7 @@
           </div>
 
           <div class="chart-wrapper">
-            <svg
-              :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
-              preserveAspectRatio="none"
-              class="chart-svg"
-            >
+            <svg :viewBox="`0 0 ${chartWidth} ${chartHeight}`" preserveAspectRatio="none" class="chart-svg">
               <defs>
                 <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stop-color="#22c55e" stop-opacity="0.6" />
@@ -185,47 +167,23 @@
               </defs>
 
               <!-- Linha -->
-              <polyline
-                :points="linePointsAttr"
-                fill="none"
-                stroke="#22c55e"
-                stroke-width="2"
-                stroke-linejoin="round"
-                stroke-linecap="round"
-              />
+              <polyline :points="linePointsAttr" fill="none" stroke="#22c55e" stroke-width="2" stroke-linejoin="round"
+                stroke-linecap="round" />
 
               <!-- Área -->
-              <polygon
-                :points="areaPointsAttr"
-                fill="url(#areaGradient)"
-              />
+              <polygon :points="areaPointsAttr" fill="url(#areaGradient)" />
 
               <!-- Pontos -->
               <g v-for="(p, idx) in linePoints" :key="idx">
-                <circle
-                  :cx="p.x"
-                  :cy="p.y"
-                  r="3"
-                  fill="#22c55e"
-                />
+                <circle :cx="p.x" :cy="p.y" r="3" fill="#22c55e" />
               </g>
             </svg>
           </div>
 
           <!-- Legenda dos dias -->
           <div class="row q-col-gutter-xs q-mt-sm">
-            <div
-              v-for="(day, idx) in dailyUsage"
-              :key="day.date || idx"
-              class="col-auto"
-            >
-              <q-chip
-                dense
-                outline
-                color="teal-4"
-                text-color="teal-1"
-                class="q-mb-xs"
-              >
+            <div v-for="(day, idx) in dailyUsage" :key="day.date || idx" class="col-auto">
+              <q-chip dense outline color="teal-4" text-color="teal-1" class="q-mb-xs">
                 {{ formatShortDate(day.date) }} • {{ formatNumber(day.tokens || 0) }} tok
               </q-chip>
             </div>
@@ -245,15 +203,8 @@
             </q-badge>
           </div>
 
-          <q-table
-            flat
-            dense
-            :rows="dailyUsageComputed"
-            :columns="columns"
-            row-key="date"
-            hide-bottom
-            class="wallet-table"
-          >
+          <q-table flat dense :rows="dailyUsageComputed" :columns="columns" row-key="date" hide-bottom
+            class="wallet-table">
             <template #body-cell-date="props">
               <q-td :props="props" class="text-dark">
                 {{ formatDate(props.row.date) }}
@@ -280,13 +231,8 @@
 
             <template #body-cell-share="props">
               <q-td :props="props" class="text-dark">
-                <q-linear-progress
-                  :value="maxTokensDay ? (props.row.tokens || 0) / maxTokensDay : 0"
-                  track-color="grey-9"
-                  color="green-14"
-                  rounded
-                  size="8px"
-                />
+                <q-linear-progress :value="maxTokensDay ? (props.row.tokens || 0) / maxTokensDay : 0"
+                  track-color="grey-9" color="green-14" rounded size="8px" />
               </q-td>
             </template>
           </q-table>
@@ -329,7 +275,7 @@ const rangeOptions = [
 ]
 
 // helper p/ ler número do localStorage aceitando "10", "10.5" ou "10,50"
-function parseCfgNumber (val, fallback = 0) {
+function parseCfgNumber(val, fallback = 0) {
   if (val === null || val === undefined || val === '') return fallback
   const normalized = String(val).replace(',', '.')
   const n = Number(normalized)
@@ -390,7 +336,7 @@ onBeforeMount(async () => {
   }
 })
 
-function notifyNoConfig () {
+function notifyNoConfig() {
   $q.notify({
     color: 'amber',
     textColor: 'black',
@@ -400,7 +346,7 @@ function notifyNoConfig () {
   })
 }
 
-async function fetchTokenUsage () {
+async function fetchTokenUsage() {
   try {
     errorMessage.value = ''
 
@@ -465,7 +411,7 @@ async function fetchTokenUsage () {
 }
 
 // handler quando mudar o range (botão toggle)
-async function onChangeRange () {
+async function onChangeRange() {
   await fetchTokenUsage()
 }
 
@@ -528,7 +474,7 @@ const areaPointsAttr = computed(() => {
 })
 
 // --- FORMATADORES ---
-function formatUsd (value) {
+function formatUsd(value) {
   const v = Number(value || 0)
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -537,7 +483,7 @@ function formatUsd (value) {
   }).format(v)
 }
 
-function formatBRL (value) {
+function formatBRL(value) {
   const v = Number(value || 0)
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -545,19 +491,19 @@ function formatBRL (value) {
   }).format(v)
 }
 
-function formatNumber (value) {
+function formatNumber(value) {
   return new Intl.NumberFormat('pt-BR', {
     maximumFractionDigits: 0
   }).format(Number(value || 0))
 }
 
-function formatDate (isoDate) {
+function formatDate(isoDate) {
   const d = new Date(isoDate)
   if (Number.isNaN(d.getTime())) return isoDate
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
-function formatShortDate (isoDate) {
+function formatShortDate(isoDate) {
   const d = new Date(isoDate)
   if (Number.isNaN(d.getTime())) return isoDate
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
@@ -593,11 +539,9 @@ const hasRealData = computed(() => dailyUsage.value.length > 0)
   width: 100%;
   height: 150px;
   border-radius: 14px;
-  background: radial-gradient(
-    circle at top left,
-    #0A0F13,
-    #0A0F13
-  );
+  background: radial-gradient(circle at top left,
+      #0A0F13,
+      #0A0F13);
   padding: 12px;
 }
 
@@ -608,7 +552,7 @@ const hasRealData = computed(() => dailyUsage.value.length > 0)
 
 /* Tabela */
 .wallet-table :deep(thead tr) {
-  background:#424242
+  background: #424242
 }
 
 .wallet-table :deep(th) {
