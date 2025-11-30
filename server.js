@@ -47,7 +47,7 @@ const upload = multer({
   }
 });
 
-async function connectMongo (mongoUri, dbName = DB_NAME, colName = COL_NAME) {
+async function connectMongo(mongoUri, dbName = DB_NAME, colName = COL_NAME) {
   if (!mongoUri) {
     throw new Error('mongoUri obrigatório');
   }
@@ -55,7 +55,7 @@ async function connectMongo (mongoUri, dbName = DB_NAME, colName = COL_NAME) {
   if (mongoClient) {
     try {
       await mongoClient.close();
-    } catch (_) {}
+    } catch (_) { }
     mongoClient = null;
     mongoDb = null;
     mongoCol = null;
@@ -87,41 +87,41 @@ const bus = new EventEmitter();
 const aiOutbox = new Set(); // guarda IDs das mensagens que NÓS enviamos como IA
 const aiOutboxDraft = new Map(); // key: chatId|sha1(normText(text)) -> expireTs (2min)
 
-function markAiMessage (msg) {
+function markAiMessage(msg) {
   try {
     const id = msg?.id?._serialized || msg?.id || null;
     if (!id) return;
     aiOutbox.add(id);
     setTimeout(() => aiOutbox.delete(id), 10 * 60 * 1000);
-  } catch {}
+  } catch { }
 }
 
-function isAiOutboxId (doc) {
+function isAiOutboxId(doc) {
   const id = doc?._id || doc?.id || null;
   return id ? aiOutbox.has(id) : false;
 }
 
-function normText (s) {
+function normText(s) {
   return String(s || '')
     .replace(/\s+/g, ' ')
     .replace(/[\u2000-\u200F]/g, '')
     .trim();
 }
 
-function sha1 (s) {
+function sha1(s) {
   return crypto.createHash('sha1').update(String(s || '')).digest('hex');
 }
 
-function markAiDraft (chatId, text) {
+function markAiDraft(chatId, text) {
   try {
     const key = `${chatId}|${sha1(normText(text))}`;
     const exp = Date.now() + 2 * 60 * 1000;
     aiOutboxDraft.set(key, exp);
     setTimeout(() => aiOutboxDraft.delete(key), 2 * 60 * 1000 + 5000);
-  } catch {}
+  } catch { }
 }
 
-function isAiDraft (chatId, text) {
+function isAiDraft(chatId, text) {
   const key = `${chatId}|${sha1(normText(text))}`;
   const exp = aiOutboxDraft.get(key);
   return !!(exp && exp > Date.now());
@@ -137,28 +137,28 @@ const lastAISendAt = new Map(); // chatId -> ts do último envio da IA
 // imagens pendentes de instrução do usuário (visão)
 const pendingVisionMap = new Map(); // chatId -> { filePath, mimeType, createdAt }
 
-function getVersion (chatId) {
+function getVersion(chatId) {
   return (aiState.get(chatId) || { version: 0 }).version;
 }
-function bumpVersion (chatId) {
+function bumpVersion(chatId) {
   const s = aiState.get(chatId) || { version: 0 };
   s.version++;
   aiState.set(chatId, s);
   return s.version;
 }
-function setHold (chatId, msFromNow) {
+function setHold(chatId, msFromNow) {
   const holdUntil = Date.now() + msFromNow;
   holdMap.set(chatId, holdUntil);
   emitStatusOne(chatId);
 }
-function getHold (chatId) {
+function getHold(chatId) {
   return holdMap.get(chatId) || 0;
 }
-function aiAllowed (chatId) {
+function aiAllowed(chatId) {
   const h = getHold(chatId);
   return !(h && h > Date.now());
 }
-function getHumanHoldMs () {
+function getHumanHoldMs() {
   try {
     const cfg = getRuntimeConfig();
     const ms = Number(cfg.ai?.HUMAN_HOLD_MS ?? 300000);
@@ -168,7 +168,7 @@ function getHumanHoldMs () {
   }
 }
 
-function enqueueChat (chatId, fn) {
+function enqueueChat(chatId, fn) {
   const prev = queueMap.get(chatId) || Promise.resolve();
 
   const next = prev
@@ -186,10 +186,10 @@ function enqueueChat (chatId, fn) {
 // === TÍTULO DO CHAT (nome/telefone) ===
 const chatTitleCache = new Map(); // chatId -> title
 
-function extractPhone (chatId = '') {
+function extractPhone(chatId = '') {
   return String(chatId).split('@')[0].replace(/\D/g, '');
 }
-function formatMsisdn (digits = '') {
+function formatMsisdn(digits = '') {
   if (!digits) return '';
   if (digits.startsWith('55')) {
     const rest = digits.slice(2);
@@ -208,7 +208,7 @@ function formatMsisdn (digits = '') {
   }
   return digits ? `+${digits}` : '';
 }
-async function getContactTitle (chatId) {
+async function getContactTitle(chatId) {
   try {
     const client = await getClient();
     const chat = await client.getChatById(chatId).catch(() => null);
@@ -226,36 +226,36 @@ async function getContactTitle (chatId) {
     if (name2 && String(name2).trim()) return String(name2).trim();
     const number2 = contact?.number || contact?.id?.user || extractPhone(chatId);
     if (number2) return formatMsisdn(String(number2));
-  } catch (_) {}
+  } catch (_) { }
   const msisdn = extractPhone(chatId);
   return formatMsisdn(msisdn) || chatId;
 }
-async function ensureChatTitle (chatId) {
+async function ensureChatTitle(chatId) {
   if (chatTitleCache.has(chatId)) return chatTitleCache.get(chatId);
   const title = await getContactTitle(chatId);
   chatTitleCache.set(chatId, title);
   return title;
 }
-async function touchChat (chatId, ts = Date.now()) {
+async function touchChat(chatId, ts = Date.now()) {
   seenMap.set(chatId, ts);
   await ensureChatTitle(chatId);
   emitStatusOne(chatId);
 }
 
-function sleep (ms) {
+function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
-function estimateTypingMs (text) {
+function estimateTypingMs(text) {
   const len = String(text || '').length;
   return Math.max(900, Math.min(6000, Math.round(len * 40)));
 }
-async function withTyping (chatId, versionAtStart, work) {
+async function withTyping(chatId, versionAtStart, work) {
   const client = await getClient();
   const chat = await client.getChatById(chatId);
   const ping = async () => {
     try {
       await chat.sendStateTyping();
-    } catch (_) {}
+    } catch (_) { }
   };
   await ping();
   const keep = setInterval(ping, 4500);
@@ -265,25 +265,25 @@ async function withTyping (chatId, versionAtStart, work) {
     clearInterval(keep);
     try {
       await chat.clearState();
-    } catch (_) {}
+    } catch (_) { }
   }
 }
 
 // === VISÃO pra imagem x figurinha ===
-function isAudioMessage (doc) {
+function isAudioMessage(doc) {
   if (doc?.type && String(doc.type).toLowerCase().includes('audio')) return true;
   const mt = doc?.media?.mimetype || '';
   return /^audio\//i.test(mt);
 }
 
-function isStickerMessage (doc) {
+function isStickerMessage(doc) {
   const t = (doc?.type || '').toLowerCase();
   if (t === 'sticker') return true;
   const mt = (doc?.media?.mimetype || '').toLowerCase();
   return mt === 'image/webp';
 }
 
-function isImagePhoto (doc) {
+function isImagePhoto(doc) {
   const t = (doc?.type || '').toLowerCase();
   const mt = (doc?.media?.mimetype || '').toLowerCase();
 
@@ -294,7 +294,7 @@ function isImagePhoto (doc) {
 }
 
 // visual "não tratado" pela visão = vídeo, etc.
-function isVisualMedia (doc) {
+function isVisualMedia(doc) {
   const t = (doc?.type || '').toLowerCase();
   if (t === 'video') return true;
   const mt = (doc?.media?.mimetype || '').toLowerCase();
@@ -306,7 +306,7 @@ const sseClients = new Set();
 let lastQrDataUrl = null;
 const logBuffer = [];
 
-function pushLog (msg) {
+function pushLog(msg) {
   const item = { ts: Date.now(), msg: String(msg) };
   logBuffer.push(item);
   if (logBuffer.length > 200) logBuffer.shift();
@@ -365,7 +365,7 @@ app.get('/events', async (req, res) => {
   req.on('close', () => sseClients.delete(res));
 });
 
-function emitStatusOne (chatId) {
+function emitStatusOne(chatId) {
   const holdUntil = getHold(chatId);
   const title = chatTitleCache.get(chatId) || extractPhone(chatId) || chatId;
   const payload = {
@@ -393,7 +393,7 @@ setInterval(() => {
 let contactGroupsCol = null;
 
 // Normaliza número para lookup (getNumberId)
-function normalizeDigitsForLookup (rawNumber) {
+function normalizeDigitsForLookup(rawNumber) {
   if (!rawNumber) return null;
 
   let digits = String(rawNumber).replace(/\D/g, '');
@@ -411,7 +411,7 @@ function normalizeDigitsForLookup (rawNumber) {
 }
 
 // Usa getNumberId pra garantir que o número é WhatsApp e pegar o _serialized correto
-async function resolveChatIdForSend (client, rawNumber) {
+async function resolveChatIdForSend(client, rawNumber) {
   const digits = normalizeDigitsForLookup(rawNumber);
   if (!digits) {
     return {
@@ -447,7 +447,7 @@ async function resolveChatIdForSend (client, rawNumber) {
 }
 
 // Coleção de grupos de disparo
-async function getContactGroupsCollection () {
+async function getContactGroupsCollection() {
   if (!mongoDb) {
     throw new Error(
       'Mongo ainda não conectado. Use /start-session no painel para configurar mongoUri.'
@@ -463,7 +463,7 @@ async function getContactGroupsCollection () {
   return contactGroupsCol;
 }
 
-function normalizeToChatIdOutbound (rawNumber) {
+function normalizeToChatIdOutbound(rawNumber) {
   if (!rawNumber) return null;
 
   let digits = String(rawNumber).replace(/\D/g, '');
@@ -480,7 +480,7 @@ function normalizeToChatIdOutbound (rawNumber) {
   return digits + '@c.us';
 }
 
-function normalizeContactsArray (list) {
+function normalizeContactsArray(list) {
   const valid = [];
   const invalid = [];
 
@@ -498,7 +498,7 @@ function normalizeContactsArray (list) {
 
   return { valid, invalid };
 }
-function normalizeToChatId (rawNumber) {
+function normalizeToChatId(rawNumber) {
   if (!rawNumber) return null;
 
   let digits = String(rawNumber).replace(/\D/g, '');
@@ -514,21 +514,21 @@ function normalizeToChatId (rawNumber) {
 
   return digits + '@c.us';
 }
-function markInboundProcessed (doc) {
+function markInboundProcessed(doc) {
   const id = doc?._id || doc?.id;
   if (!id) return;
   processedInbounds.add(id);
   setTimeout(() => processedInbounds.delete(id), 3 * 60 * 1000);
 }
-function wasInboundProcessed (doc) {
+function wasInboundProcessed(doc) {
   const id = doc?._id || doc?.id;
   return id ? processedInbounds.has(id) : false;
 }
 
-function isAIBody (text = '') {
+function isAIBody(text = '') {
   return isBotText(normText(String(text)));
 }
-function isBotReply (text = '') {
+function isBotReply(text = '') {
   return isBotText(String(text));
 }
 
@@ -726,7 +726,7 @@ app.post('/config/ai', async (req, res) => {
         if (cfg.mongoUri) {
           mongoUri = String(cfg.mongoUri || '').trim();
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     if (!mongoUri) {
@@ -740,12 +740,12 @@ app.post('/config/ai', async (req, res) => {
     if (!hasRuntimeConfig()) {
       const openaiCfg = openaiBody
         ? {
-            apiKey: openaiBody.OPENAI_API_KEY || '',
-            model: openaiBody.OPENAI_CHAT_MODEL || 'gpt-4.1-mini',
-            temperature: Number(openaiBody.OPENAI_TEMPERATURE ?? 0.8),
-            maxTokens: Number(openaiBody.OPENAI_MAX_TOKENS ?? 900),
-            transcribeModel: openaiBody.TRANSCRIBE_MODEL || 'whisper-1'
-          }
+          apiKey: openaiBody.OPENAI_API_KEY || '',
+          model: openaiBody.OPENAI_CHAT_MODEL || 'gpt-4.1-mini',
+          temperature: Number(openaiBody.OPENAI_TEMPERATURE ?? 0.8),
+          maxTokens: Number(openaiBody.OPENAI_MAX_TOKENS ?? 900),
+          transcribeModel: openaiBody.TRANSCRIBE_MODEL || 'whisper-1'
+        }
         : {};
 
       initRuntimeConfig({
@@ -843,7 +843,7 @@ app.get('/config/ai', (req, res) => {
 /**
  * Fluxo para descrever imagem via IA de visão
  */
-async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
+async function handleDescribeImage({ doc, instruction, filePath, mimeType }) {
   const chatId = doc.chatId;
   const versionAtStart = getVersion(chatId);
 
@@ -1121,7 +1121,7 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
                     if (parsed && typeof parsed === 'object' && parsed.type) {
                       item = parsed;
                     }
-                  } catch (_) {}
+                  } catch (_) { }
                 }
               }
 
@@ -1161,8 +1161,7 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
                     markAiMessage(sent);
                   } catch (err) {
                     pushLog(
-                      `[AI IMAGE ERROR] chat=${doc.chatId} ao enviar imagem: ${
-                        err?.message || err
+                      `[AI IMAGE ERROR] chat=${doc.chatId} ao enviar imagem: ${err?.message || err
                       }`
                     );
                     const fallbackText = botPrefix(
@@ -1250,11 +1249,14 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
         try {
           if (mediaUrl) {
             const media = await MessageMedia.fromUrl(mediaUrl);
-            await client.sendMessage(chatId, media, {
+            const sent = await client.sendMessage(chatId, media, {
               caption: caption || text || ''
             });
+            // ⚠️ marca como mensagem “nossa” pra não virar takeover
+            markAiMessage(sent);
           } else {
-            await client.sendMessage(chatId, text);
+            const sent = await client.sendMessage(chatId, text);
+            markAiMessage(sent);
           }
 
           results.push({ contact: raw, chatId, ok: true });
@@ -1383,6 +1385,7 @@ async function handleDescribeImage ({ doc, instruction, filePath, mimeType }) {
           await client.sendMessage(resolved.chatId, media, {
             caption: usedCaption || undefined
           });
+          markAiMessage(sent);
           results.push({ raw, chatId: resolved.chatId, ok: true });
           success++;
         } catch (e) {
