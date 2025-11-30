@@ -29,3 +29,8 @@ body {
 .q-input, .q-select, .q-textarea {
     background-color: #e2e2e2!important;
 }
+
+.q-dialog {
+    background: #1b1b1bbe;
+    backdrop-filter: blur(12px);
+}
