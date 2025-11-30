@@ -22,8 +22,10 @@ async function getCollection () {
   }
 
   const cfg = getRuntimeConfig();
-  const uri = cfg.mongo?.uri;
-  const dbName = cfg.mongo?.dbName || 'iano_whatsapp';
+
+  // 🔧 tenta primeiro mongoUri (padrão atual do server.js), depois objeto mongo. 
+  const uri = cfg.mongoUri || cfg.mongo?.uri;
+  const dbName = (cfg.mongo && cfg.mongo.dbName) || 'iano_whatsapp';
 
   if (!uri) {
     throw new Error('mongo.uri não definido no runtimeConfig.');

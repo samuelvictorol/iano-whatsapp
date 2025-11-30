@@ -6,6 +6,7 @@
         <q-breadcrumbs-el class="text-grey " label="Configurações" icon="settings" to="/configurar" />
         <q-breadcrumbs-el class="text-green-14 " label="Tokens" icon="token" to="/tokens" />
       </q-breadcrumbs>
+
       <!-- Banner de erro -->
       <div v-if="errorMessage" class="q-mb-md">
         <q-banner dense rounded class="bg-red-10 text-red-2">
@@ -30,11 +31,21 @@
             </div>
 
             <div class="q-mt-sm text-grey-5">
-              <q-badge v-if="hasRealData" color="green-14" text-color="black" class="q-mr-sm text-bold">
+              <q-badge
+                v-if="hasRealData"
+                color="green-14"
+                text-color="black"
+                class="q-mr-sm text-bold"
+              >
                 Dados reais
               </q-badge>
 
-              <q-badge v-else color="grey-7" text-color="grey-1" class="q-mr-sm">
+              <q-badge
+                v-else
+                color="grey-7"
+                text-color="grey-1"
+                class="q-mr-sm"
+              >
                 Ainda sem uso registrado
               </q-badge>
 
@@ -58,8 +69,16 @@
 
             <!-- Filtro de período -->
             <div class="q-mt-sm">
-              <q-btn-toggle v-model="range" :options="rangeOptions" dense toggle-color="primary" color="grey-9"
-                text-color="grey-1" size="md" @update:model-value="onChangeRange" />
+              <q-btn-toggle
+                v-model="range"
+                :options="rangeOptions"
+                dense
+                toggle-color="primary"
+                color="grey-9"
+                text-color="grey-1"
+                size="md"
+                @update:model-value="onChangeRange"
+              />
             </div>
           </div>
         </div>
@@ -158,7 +177,11 @@
           </div>
 
           <div class="chart-wrapper">
-            <svg :viewBox="`0 0 ${chartWidth} ${chartHeight}`" preserveAspectRatio="none" class="chart-svg">
+            <svg
+              :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
+              preserveAspectRatio="none"
+              class="chart-svg"
+            >
               <defs>
                 <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stop-color="#22c55e" stop-opacity="0.6" />
@@ -167,8 +190,14 @@
               </defs>
 
               <!-- Linha -->
-              <polyline :points="linePointsAttr" fill="none" stroke="#22c55e" stroke-width="2" stroke-linejoin="round"
-                stroke-linecap="round" />
+              <polyline
+                :points="linePointsAttr"
+                fill="none"
+                stroke="#22c55e"
+                stroke-width="2"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+              />
 
               <!-- Área -->
               <polygon :points="areaPointsAttr" fill="url(#areaGradient)" />
@@ -182,8 +211,18 @@
 
           <!-- Legenda dos dias -->
           <div class="row q-col-gutter-xs q-mt-sm">
-            <div v-for="(day, idx) in dailyUsage" :key="day.date || idx" class="col-auto">
-              <q-chip dense outline color="teal-4" text-color="teal-1" class="q-mb-xs">
+            <div
+              v-for="(day, idx) in dailyUsage"
+              :key="day.date || idx"
+              class="col-auto"
+            >
+              <q-chip
+                dense
+                outline
+                color="teal-4"
+                text-color="teal-1"
+                class="q-mb-xs"
+              >
                 {{ formatShortDate(day.date) }} • {{ formatNumber(day.tokens || 0) }} tok
               </q-chip>
             </div>
@@ -203,8 +242,15 @@
             </q-badge>
           </div>
 
-          <q-table flat dense :rows="dailyUsageComputed" :columns="columns" row-key="date" hide-bottom
-            class="wallet-table">
+          <q-table
+            flat
+            dense
+            :rows="dailyUsageComputed"
+            :columns="columns"
+            row-key="date"
+            hide-bottom
+            class="wallet-table"
+          >
             <template #body-cell-date="props">
               <q-td :props="props" class="text-dark">
                 {{ formatDate(props.row.date) }}
@@ -231,14 +277,18 @@
 
             <template #body-cell-share="props">
               <q-td :props="props" class="text-dark">
-                <q-linear-progress :value="maxTokensDay ? (props.row.tokens || 0) / maxTokensDay : 0"
-                  track-color="grey-9" color="green-14" rounded size="8px" />
+                <q-linear-progress
+                  :value="maxTokensDay ? (props.row.tokens || 0) / maxTokensDay : 0"
+                  track-color="grey-9"
+                  color="green-14"
+                  rounded
+                  size="8px"
+                />
               </q-td>
             </template>
           </q-table>
         </q-card-section>
       </q-card>
-
     </div>
   </q-page>
 </template>
@@ -273,14 +323,6 @@ const rangeOptions = [
   { label: '30 dias', value: '30d' },
   { label: 'Mês atual', value: 'month' }
 ]
-
-// helper p/ ler número do localStorage aceitando "10", "10.5" ou "10,50"
-function parseCfgNumber(val, fallback = 0) {
-  if (val === null || val === undefined || val === '') return fallback
-  const normalized = String(val).replace(',', '.')
-  const n = Number(normalized)
-  return Number.isFinite(n) ? n : fallback
-}
 
 // taxa de câmbio USD→BRL (pode vir da config_openai ou usa fallback)
 const usdToBrlRate = computed(() => {
@@ -326,9 +368,6 @@ onBeforeMount(async () => {
     // guarda a config em memória (para taxa de câmbio etc.)
     openaiConfig.value = parsed
 
-    // (debug opcional)
-    console.log('[Wallet] config_openai carregada:', parsed)
-
     await fetchTokenUsage()
   } catch (e) {
     console.error('Erro ao validar OPENAI_API_KEY para Wallet de tokens', e)
@@ -336,7 +375,7 @@ onBeforeMount(async () => {
   }
 })
 
-function notifyNoConfig() {
+function notifyNoConfig () {
   $q.notify({
     color: 'amber',
     textColor: 'black',
@@ -346,12 +385,12 @@ function notifyNoConfig() {
   })
 }
 
-async function fetchTokenUsage() {
+async function fetchTokenUsage () {
   try {
     errorMessage.value = ''
 
     // pega config do localStorage
-    const raw = localStorage.getItem('config_openai')
+    const raw = localStorage.getItem(STORAGE_KEYS.openai)
     let openaiKey = ''
 
     if (raw) {
@@ -371,7 +410,7 @@ async function fetchTokenUsage() {
     const { data } = await api.get('/token-usage', {
       params: {
         range: range.value,
-        openaiKey // 👈 também manda na query se quiser
+        openaiKey // também manda na query se quiser
       },
       headers: {
         'x-openai-key': openaiKey
@@ -398,20 +437,25 @@ async function fetchTokenUsage() {
     }
   } catch (err) {
     console.error('Erro ao carregar dados de tokens', err)
-    errorMessage.value = err?.message || 'Erro ao buscar dados de tokens'
 
     const backendMsg = err?.response?.data?.error
+
+    errorMessage.value =
+      backendMsg === 'mongo.uri não definido no runtimeConfig.'
+        ? 'Sessão ainda não configurada no backend. Vá em Configurações → Nova Sessão para inicializar o Mongo.'
+        : (backendMsg || err?.message || 'Erro ao buscar dados de tokens')
+
     $q.notify({
       color: 'negative',
       position: 'top',
       icon: 'error',
-      message: backendMsg || errorMessage.value
+      message: errorMessage.value
     })
   }
 }
 
 // handler quando mudar o range (botão toggle)
-async function onChangeRange() {
+async function onChangeRange () {
   await fetchTokenUsage()
 }
 
@@ -474,7 +518,7 @@ const areaPointsAttr = computed(() => {
 })
 
 // --- FORMATADORES ---
-function formatUsd(value) {
+function formatUsd (value) {
   const v = Number(value || 0)
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -483,7 +527,7 @@ function formatUsd(value) {
   }).format(v)
 }
 
-function formatBRL(value) {
+function formatBRL (value) {
   const v = Number(value || 0)
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -491,19 +535,19 @@ function formatBRL(value) {
   }).format(v)
 }
 
-function formatNumber(value) {
+function formatNumber (value) {
   return new Intl.NumberFormat('pt-BR', {
     maximumFractionDigits: 0
   }).format(Number(value || 0))
 }
 
-function formatDate(isoDate) {
+function formatDate (isoDate) {
   const d = new Date(isoDate)
   if (Number.isNaN(d.getTime())) return isoDate
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
-function formatShortDate(isoDate) {
+function formatShortDate (isoDate) {
   const d = new Date(isoDate)
   if (Number.isNaN(d.getTime())) return isoDate
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
@@ -540,8 +584,8 @@ const hasRealData = computed(() => dailyUsage.value.length > 0)
   height: 150px;
   border-radius: 14px;
   background: radial-gradient(circle at top left,
-      #0A0F13,
-      #0A0F13);
+  #0A0F13,
+  #0A0F13);
   padding: 12px;
 }
 

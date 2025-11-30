@@ -21,7 +21,7 @@
       </q-tabs>
     </q-header>
 
-    <q-page-container>
+    <q-page-container class="q-pb-xl">
       <router-view />
     </q-page-container>
 
