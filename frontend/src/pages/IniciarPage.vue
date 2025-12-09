@@ -408,7 +408,7 @@ onBeforeUnmount(() => {
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 4px;
   box-shadow: 0 10px 10px rgba(0, 0, 0, 0.635);
   padding: 12px;
 }

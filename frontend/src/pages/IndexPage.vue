@@ -695,7 +695,7 @@ docker compose up -d --build</code></pre>
                   <q-item>
                     <q-item-section>
                       <q-item-label caption class="text-grey-4">
-                        Disparos em massa com UI tipo “mini Swagger”
+                        Disparos em massa com UI
                       </q-item-label>
                     </q-item-section>
                   </q-item>
@@ -708,7 +708,7 @@ docker compose up -d --build</code></pre>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption class="text-grey-4">
+                      <q-item-label caption class="text-grey-4 q-mb-sm">
                         Telas de configuração plugadas no Mongo (hot reload de IA e catálogo)
                       </q-item-label>
                     </q-item-section>
@@ -742,7 +742,7 @@ docker compose up -d --build</code></pre>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption class="text-grey-4">
+                      <q-item-label caption class="text-grey-4 q-pb-sm">
                         Poucas variáveis de ambiente, foco no frontend para ajustes diários
                       </q-item-label>
                     </q-item-section>
@@ -758,8 +758,7 @@ docker compose up -d --build</code></pre>
               Quem mantém o IanoWhatsapp?
             </div>
             <div class="doc-section-subtitle q-mb-md">
-              Projeto criado e mantido por Samuel Victor Oliveira Lima — Founder da AITOSOFTWARES,
-              desenvolvedor, especialista em automação e IA aplicada a negócios.
+              Projeto criado e mantido por Samuel Victor Oliveira Lima.
             </div>
 
             <q-list dense class="doc-list q-py-sm q-mb-md">
@@ -918,7 +917,7 @@ function openDocOnline() {
 /* Wrapper de vídeo no hero */
 .doc-video-wrapper {
   border-radius: 12px;
-  background: #0A0F13;
+  background: #0a0a0a;
   border: 1px solid rgba(75, 75, 75, 0.918);
   padding: 8px;
 }
