@@ -25,7 +25,7 @@
               </div>
 
               <div class="text-overline text-green-14 doc-pill q-mb-xs">
-                IANO WhatsApp · Open source · Multi-tenant · Plugável
+                IANO WhatsApp · Multi-tenant · Plugável
               </div>
 
               <div class="text-subtitle1 text-grey-3 q-mb-md">
@@ -33,18 +33,24 @@
                 e integrações HTTP plugáveis — atualizando IA e catálogo em tempo real.
               </div>
 
-              <div class="text-green-3">
+              <!-- <div class="text-green-3">
                 A IanoWhatsapp conecta o WhatsApp Web, OpenAI e os seus sistemas via HTTP.
                 Você controla contexto, regras e integrações direto pelo frontend, salva tudo no MongoDB
                 e reaproveita a mesma infraestrutura para vários clientes (multi-tenant).
-              </div>
+              </div> -->
 
               <div class="row q-mt-md doc-chip-list">
                 <q-chip outline color="amber" text-color="black" icon="support_agent">
                   SDR configurável
                 </q-chip>
+                <q-chip outline color="green-14" text-color="black" icon="token">
+                  Monitoramento de tokens
+                </q-chip>
                 <q-chip outline color="teal-14" text-color="teal-3" icon="graphic_eq">
                   Áudio + Visão (OpenAI)
+                </q-chip>
+                <q-chip outline color="teal-14" text-color="teal-3" icon="mdi-database">
+                  Contexto dinâmico
                 </q-chip>
                 <q-chip outline color="blue" text-color="blue-3" icon="cloud_queue">
                   API Integrável
@@ -65,9 +71,9 @@
             </div>
             <div class="col-auto">
               <div class="row q-gutter-sm">
-                <q-btn outline icon="mdi-github" label="Repositório no GitHub" class="text-white" @click="openGithub" />
-                <q-btn icon-right="mdi-robot-happy-outline" label="Configurar minha I.A"
-                  class="bg-accent glossy text-weight-bold" to="/configurar" />
+                <q-btn outline icon="mdi-github" label="GitHub" class="text-white" @click="openGithub" />
+                <q-btn icon-right="mdi-robot-happy-outline" label="Configurar minha I.A" outline
+                  class="text-accent q-pa-md text-weight-bold" to="/configurar" />
               </div>
             </div>
           </div>
@@ -765,7 +771,7 @@ docker compose up -d --build</code></pre>
                 </q-item-section>
                 <q-item-section>
                   <q-item-label class="text-white">
-                    Portfólio profissional
+                    Portfólio
                   </q-item-label>
                   <q-item-label caption>
                     <a href="https://samuelvictorol.github.io/portfolio/" target="_blank" class="text-green-14">
@@ -815,7 +821,7 @@ docker compose up -d --build</code></pre>
             </div>
 
             <div class="text-caption text-grey-5 q-mt-lg">
-              IanoWhatsapp · Open Source · 2025
+              IanoWhatsapp · 2025
             </div>
           </q-tab-panel>
         </q-tab-panels>

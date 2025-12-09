@@ -3,19 +3,15 @@
     <div>
       <q-breadcrumbs>
         <q-breadcrumbs-el class="text-grey" label="Início" icon="home" to="/" />
-        <q-breadcrumbs-el class="text-grey " label="Configurações" icon="settings" to="/configurar" />
-        <q-breadcrumbs-el class="text-green-14 " label="Tokens" icon="token" to="/tokens" />
+        <q-breadcrumbs-el class="text-grey" label="Configurações" icon="settings" to="/configurar" />
+        <q-breadcrumbs-el class="text-green-14" label="Tokens" icon="token" to="/tokens" />
       </q-breadcrumbs>
 
       <!-- Banner de erro -->
       <div v-if="errorMessage" class="q-mb-md">
         <q-banner dense rounded class="bg-red-10 text-red-2">
-          <div class="text-subtitle2">
-            Erro ao carregar dados de tokens
-          </div>
-          <div class="text-caption">
-            {{ errorMessage }}
-          </div>
+          <div class="text-subtitle2">Erro ao carregar dados de tokens</div>
+          <div class="text-caption">{{ errorMessage }}</div>
         </q-banner>
       </div>
 
@@ -23,268 +19,120 @@
       <div class="q-mb-lg">
         <div class="row items-center justify-between q-gutter-sm q-pt-md">
           <div>
-            <div class="text-h5 text-weight-bold text-white q-mb-xs">
-              💳 Wallet de Tokens
-            </div>
-            <div class="q-mt-sm text-grey-5">
-              <q-badge
-                v-if="hasRealData"
-                color="green-14"
-                text-color="black"
-                class="q-mr-sm text-bold"
-              >
-                Dados reais
-              </q-badge>
+            <div class="text-h5 text-weight-bold text-white q-mb-xs">💳 Wallet de Tokens</div>
 
-              <q-badge
-                v-else
-                color="grey-7"
-                text-color="grey-1"
-                class="q-mr-sm"
-              >
-                Ainda sem uso registrado
-              </q-badge>
+            <q-badge
+              v-if="hasRealData"
+              color="green-14"
+              text-color="black"
+              class="q-mr-sm text-bold"
+            >Dados reais</q-badge>
 
-              <span class="text-caption">
-                Período exibido: {{ rangeLabel }}.
-              </span>
+            <q-badge
+              v-else
+              color="grey-7"
+              text-color="grey-1"
+              class="q-mr-sm"
+            >Ainda sem uso registrado</q-badge>
 
-              <div class="text-caption text-grey-6 q-mt-xs">
-                Conversão BRL usando taxa: {{ usdToBrlRate.toFixed(2) }} R$/USD
-              </div>
+            <div class="text-caption text-grey-5">Período exibido: {{ rangeLabel }}.</div>
+            <div class="text-caption text-grey-6 q-mt-xs">
+              Conversão BRL usando taxa: {{ usdToBrlRate.toFixed(2) }} R$/USD
             </div>
           </div>
 
           <div class="column" :class="isMobile ? 'items-start' : 'items-end'">
-            <div class="text-caption text-grey-5">
-              Última atualização
-            </div>
-            <div class="text-subtitle2 text-grey-2">
-              {{ lastUpdatedLabel }}
-            </div>
+            <div class="text-caption text-grey-5">Última atualização</div>
+            <div class="text-subtitle2 text-grey-2">{{ lastUpdatedLabel }}</div>
 
-            <!-- Filtro de período -->
-            <div class="q-mt-sm">
-              <q-btn-toggle
-                v-model="range"
-                :options="rangeOptions"
-                dense
-                toggle-color="primary"
-                color="grey-9"
-                text-color="grey-1"
-                size="md"
-                @update:model-value="onChangeRange"
-              />
-            </div>
+            <q-btn-toggle
+              v-model="range"
+              :options="rangeOptions"
+              dense
+              toggle-color="primary"
+              color="grey-9"
+              text-color="grey-1"
+              size="md"
+              @update:model-value="onChangeRange"
+              class="q-mt-sm"
+            />
           </div>
         </div>
       </div>
 
-      <!-- Resumo principal (sem saldo, só consumo) -->
+      <!-- Resumo -->
       <div class="row q-col-gutter-md q-mb-md">
         <div class="col-12 col-md-4">
           <q-card class="section-card summary-card">
-            <q-card-section class="row items-center justify-between">
-              <div>
-                <div class="text-caption text-grey-4">
-                  Consumo no período (USD)
-                </div>
-                <div class="text-h5 text-amber-3">
-                  {{ formatUsd(summary.spentUsdRange) }}
-                </div>
-                <div class="text-caption text-grey-6 q-mt-xs">
-                  Considerando todas as chamadas da IA no intervalo {{ rangeLabel.toLowerCase() }}.
-                </div>
-              </div>
-              <q-icon name="trending_up" size="32px" class="text-amber-3" />
+            <q-card-section>
+              <div class="text-caption text-grey-4">Consumo (USD)</div>
+              <div class="text-h5 text-amber-3">{{ formatUsd(summary.spentUsdRange) }}</div>
             </q-card-section>
           </q-card>
         </div>
 
         <div class="col-12 col-md-4">
           <q-card class="section-card summary-card">
-            <q-card-section class="row items-center justify-between">
-              <div>
-                <div class="text-caption text-grey-4">
-                  Consumo no período (BRL)
-                </div>
-                <div class="text-h5 text-teal-3">
-                  {{ formatBRL(summary.spentBrlRange) }}
-                </div>
-                <div class="text-caption text-grey-6 q-mt-xs">
-                  Convertido usando taxa configurada / padrão.
-                </div>
-              </div>
-              <q-icon name="payments" size="32px" class="text-teal-3" />
+            <q-card-section>
+              <div class="text-caption text-grey-4">Consumo (BRL)</div>
+              <div class="text-h5 text-teal-3">{{ formatBRL(summary.spentBrlRange) }}</div>
             </q-card-section>
           </q-card>
         </div>
 
         <div class="col-12 col-md-4">
           <q-card class="section-card summary-card">
-            <q-card-section class="row items-center justify-between">
-              <div>
-                <div class="text-caption text-grey-3">
-                  Tokens no período
-                </div>
-                <div class="text-h5 text-green-3">
-                  {{ formatNumber(summary.totalTokensThisRange) }} tok
-                </div>
-                <div class="text-caption text-grey-4 q-mt-xs">
-                  Soma de todos os tokens (prompt + completion) no intervalo.
-                </div>
-              </div>
-              <q-icon name="token" size="32px" class="text-green-3" />
+            <q-card-section>
+              <div class="text-caption text-grey-3">Tokens no período</div>
+              <div class="text-h5 text-green-3">{{ formatNumber(summary.totalTokensThisRange) }}</div>
             </q-card-section>
           </q-card>
         </div>
       </div>
 
-      <!-- Caso ainda não tenha dados -->
-      <div v-if="!hasRealData" class="q-mb-md">
+      <!-- Sem dados -->
+      <div v-if="!hasRealData">
         <q-card class="section-card">
           <q-card-section>
-            <div class="text-subtitle1 text-grey-2 q-mb-xs">
-              Nenhum uso de tokens encontrado
-            </div>
-            <div class="text-caption text-grey-5">
-              Assim que sua IA começar a responder clientes usando a OpenAI,
-              os dados de consumo vão aparecer aqui automaticamente.
-            </div>
+            <div class="text-subtitle1 text-grey-2">Nenhum uso encontrado</div>
           </q-card-section>
         </q-card>
       </div>
 
-      <!-- Gráfico de consumo -->
+      <!-- GRÁFICO DE BARRAS -->
       <q-card v-if="hasRealData" class="section-card q-mb-md">
         <q-card-section>
-          <div class="row items-center justify-between q-mb-sm">
-            <div>
-              <div class="text-subtitle1 text-grey-2">
-                Consumo diário de tokens ({{ rangeLabel }})
-              </div>
-              <div class="text-caption text-grey-5">
-                Linha representa tokens consumidos por dia. Área mostra a tendência.
-              </div>
-            </div>
-            <q-badge color="teal-4" text-color="black" outline>
-              Máx: {{ formatNumber(maxTokensDay) }} tokens/dia
-            </q-badge>
-          </div>
-
-          <div class="chart-wrapper">
-            <svg
-              :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
-              preserveAspectRatio="none"
-              class="chart-svg"
-            >
-              <defs>
-                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#22c55e" stop-opacity="0.6" />
-                  <stop offset="100%" stop-color="#22c55e" stop-opacity="0" />
-                </linearGradient>
-              </defs>
-
-              <!-- Linha -->
-              <polyline
-                :points="linePointsAttr"
-                fill="none"
-                stroke="#22c55e"
-                stroke-width="2"
-                stroke-linejoin="round"
-                stroke-linecap="round"
-              />
-
-              <!-- Área -->
-              <polygon :points="areaPointsAttr" fill="url(#areaGradient)" />
-
-              <!-- Pontos -->
-              <g v-for="(p, idx) in linePoints" :key="idx">
-                <circle :cx="p.x" :cy="p.y" r="3" fill="#22c55e" />
-              </g>
-            </svg>
-          </div>
-
-          <!-- Legenda dos dias -->
-          <div class="row q-col-gutter-xs q-mt-sm">
-            <div
-              v-for="(day, idx) in dailyUsage"
-              :key="day.date || idx"
-              class="col-auto"
-            >
-              <q-chip
-                dense
-                outline
-                color="teal-4"
-                text-color="teal-1"
-                class="q-mb-xs"
-              >
-                {{ formatShortDate(day.date) }} • {{ formatNumber(day.tokens || 0) }} tok
-              </q-chip>
-            </div>
+          <div class="text-subtitle1 text-grey-2 q-mb-md">Tokens por Dia</div>
+          <div style="height:300px;">
+            <Bar :data="barChartData" :options="barChartOptions" />
           </div>
         </q-card-section>
       </q-card>
 
-      <!-- Tabela de detalhes -->
+      <!-- GRÁFICO DE PIZZA -->
+      <q-card v-if="hasRealData" class="section-card q-mb-md">
+        <q-card-section>
+          <div class="text-subtitle1 text-grey-2 q-mb-md">Distribuição de Custo (USD)</div>
+          <div style="height:300px;">
+            <Pie :data="pieChartData" :options="pieChartOptions" />
+          </div>
+        </q-card-section>
+      </q-card>
+
+      <!-- Tabela -->
       <q-card v-if="hasRealData" class="section-card">
         <q-card-section>
-          <div class="row items-center justify-between q-mb-sm">
-            <div class="text-subtitle1 text-grey-2">
-              Detalhamento por dia
-            </div>
-            <q-badge color="grey-9" text-color="grey-2">
-              {{ rangeLabel }}
-            </q-badge>
-          </div>
-
           <q-table
-            flat
-            dense
+            flat dense
             :rows="dailyUsageComputed"
             :columns="columns"
             row-key="date"
             hide-bottom
             class="wallet-table"
-          >
-            <template #body-cell-date="props">
-              <q-td :props="props" class="text-dark">
-                {{ formatDate(props.row.date) }}
-              </q-td>
-            </template>
-
-            <template #body-cell-tokens="props">
-              <q-td :props="props" class="text-dark">
-                {{ formatNumber(props.row.tokens || 0) }}
-              </q-td>
-            </template>
-
-            <template #body-cell-usd="props">
-              <q-td :props="props" class="text-dark">
-                {{ formatUsd(props.row.usd || 0) }}
-              </q-td>
-            </template>
-
-            <template #body-cell-brl="props">
-              <q-td :props="props" class="text-dark">
-                {{ formatBRL(props.row.brl || 0) }}
-              </q-td>
-            </template>
-
-            <template #body-cell-share="props">
-              <q-td :props="props" class="text-dark">
-                <q-linear-progress
-                  :value="maxTokensDay ? (props.row.tokens || 0) / maxTokensDay : 0"
-                  track-color="grey-9"
-                  color="green-14"
-                  rounded
-                  size="8px"
-                />
-              </q-td>
-            </template>
-          </q-table>
+          />
         </q-card-section>
       </q-card>
+
     </div>
   </q-page>
 </template>
@@ -294,15 +142,34 @@ import { ref, computed, onBeforeMount } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 
+/* ---------------------------
+    IMPORTAÇÃO DO CHART.JS
+---------------------------- */
+import {
+  Chart as ChartJS,
+  BarElement,
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend
+} from 'chart.js'
+import { Bar, Pie } from 'vue-chartjs'
+
+ChartJS.register(
+  BarElement,
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend
+)
+
 const $q = useQuasar()
 const isMobile = $q.screen.lt.md
 
-const STORAGE_KEYS = {
-  openai: 'config_openai'
-}
-
-// --- ESTADO ---
-const dailyUsage = ref([]) // vindo da API (range configurável)
+/* ESTADOS */
+const dailyUsage = ref([])
 const summary = ref({
   totalTokensThisRange: 0,
   spentUsdRange: 0,
@@ -312,7 +179,7 @@ const summary = ref({
 const errorMessage = ref('')
 const openaiConfig = ref(null)
 
-// range de período
+/* RANGE */
 const range = ref('7d')
 const rangeOptions = [
   { label: '7 dias', value: '7d' },
@@ -320,247 +187,188 @@ const rangeOptions = [
   { label: 'Mês atual', value: 'month' }
 ]
 
-// taxa de câmbio USD→BRL (pode vir da config_openai ou usa fallback)
+/* TAXA USD→BRL */
 const usdToBrlRate = computed(() => {
   const cfg = openaiConfig.value || {}
-  const raw =
-    cfg.USD_BRL_RATE ??
-    cfg.OPENAI_USD_BRL ??
-    null
-
-  if (raw === null || raw === undefined || raw === '') {
-    // fallback se nada estiver configurado
-    return 6.0
-  }
-
+  const raw = cfg.USD_BRL_RATE ?? cfg.OPENAI_USD_BRL ?? null
   const n = Number(String(raw).replace(',', '.'))
   return Number.isFinite(n) && n > 0 ? n : 6.0
 })
 
-// label legível do range
-const rangeLabel = computed(() => {
-  if (range.value === '30d') return 'últimos 30 dias'
-  if (range.value === 'month') return 'mês atual'
-  return 'últimos 7 dias'
-})
+/* LABEL RANGE */
+const rangeLabel = computed(() => (
+  range.value === '30d'
+    ? 'últimos 30 dias'
+    : range.value === 'month'
+      ? 'mês atual'
+      : 'últimos 7 dias'
+))
 
-// --- BLOQUEIO SEM OPENAI_API_KEY + carregamento inicial ---
+/* ----------------------------------------
+  CARREGAR CONFIG INICIAL
+----------------------------------------- */
 onBeforeMount(async () => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.openai)
-    if (!raw) {
-      notifyNoConfig()
-      return
-    }
+    const raw = localStorage.getItem('config_openai')
+    if (!raw) return notifyNoConfig()
 
     const parsed = JSON.parse(raw)
-    const hasKey = !!parsed.OPENAI_API_KEY
+    if (!parsed.OPENAI_API_KEY) return notifyNoConfig()
 
-    if (!hasKey) {
-      notifyNoConfig()
-      return
-    }
-
-    // guarda a config em memória (para taxa de câmbio etc.)
     openaiConfig.value = parsed
-
     await fetchTokenUsage()
-  } catch (e) {
-    console.error('Erro ao validar OPENAI_API_KEY para Wallet de tokens', e)
+  } catch {
     notifyNoConfig()
   }
 })
 
-function notifyNoConfig () {
+function notifyNoConfig() {
   $q.notify({
     color: 'amber',
     textColor: 'black',
     icon: 'settings',
-    position: 'top',
-    message: 'Configure as credenciais obrigatórias antes de acessar a Wallet de Tokens.'
+    message: 'Configure a OPENAI API KEY antes de usar a Wallet.'
   })
 }
 
-async function fetchTokenUsage () {
+/* ----------------------------------------
+  BUSCAR USO NO BACKEND
+----------------------------------------- */
+async function fetchTokenUsage() {
   try {
-    errorMessage.value = ''
-
-    // pega config do localStorage
-    const raw = localStorage.getItem(STORAGE_KEYS.openai)
-    let openaiKey = ''
-
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw)
-        openaiKey = parsed.OPENAI_API_KEY || ''
-      } catch (e) {
-        console.error('Erro ao parsear config_openai', e)
-      }
-    }
-
-    if (!openaiKey) {
-      errorMessage.value = 'Configure sua OPENAI API KEY na aba Configurar antes de ver o uso de tokens.'
-      return
-    }
+    const raw = localStorage.getItem('config_openai')
+    const parsed = JSON.parse(raw)
+    const key = parsed.OPENAI_API_KEY
 
     const { data } = await api.get('/token-usage', {
-      params: {
-        range: range.value,
-        openaiKey // também manda na query se quiser
-      },
-      headers: {
-        'x-openai-key': openaiKey
-      }
+      params: { range: range.value },
+      headers: { 'x-openai-key': key }
     })
 
-    if (!data?.ok) {
-      throw new Error(data?.error || 'Falha ao buscar uso de tokens')
-    }
-
-    const daily = Array.isArray(data.daily) ? data.daily : []
-    dailyUsage.value = daily
-
-    const apiSummary = data.summary || {}
-
-    const totalTokensRange = Number(apiSummary.totalTokensThisRange || 0)
-    const spentUsdRange = Number(apiSummary.spentUsdThisRange || 0)
-    const spentBrlRange = spentUsdRange * usdToBrlRate.value
+    dailyUsage.value = data.daily || []
 
     summary.value = {
-      totalTokensThisRange: totalTokensRange,
-      spentUsdRange,
-      spentBrlRange
+      totalTokensThisRange: data.summary.totalTokensThisRange,
+      spentUsdRange: data.summary.spentUsdThisRange,
+      spentBrlRange: data.summary.spentUsdThisRange * usdToBrlRate.value
     }
   } catch (err) {
-    console.error('Erro ao carregar dados de tokens', err)
-
-    const backendMsg = err?.response?.data?.error
-
-    errorMessage.value =
-      backendMsg === 'mongo.uri não definido no runtimeConfig.'
-        ? 'Sessão ainda não configurada no backend. Vá em Configurações → Nova Sessão para inicializar o Mongo.'
-        : (backendMsg || err?.message || 'Erro ao buscar dados de tokens')
-
-    $q.notify({
-      color: 'negative',
-      position: 'top',
-      icon: 'error',
-      message: errorMessage.value
-    })
+    errorMessage.value = err?.response?.data?.error || err.message
   }
 }
 
-// handler quando mudar o range (botão toggle)
-async function onChangeRange () {
+async function onChangeRange() {
   await fetchTokenUsage()
 }
 
-// --- COLUMNS TABELA ---
+/* ----------------------------------------
+      TABELA
+----------------------------------------- */
 const columns = [
   { name: 'date', label: 'Dia', field: 'date', align: 'left' },
   { name: 'tokens', label: 'Tokens', field: 'tokens', align: 'right' },
   { name: 'usd', label: 'Custo (USD)', field: 'usd', align: 'right' },
-  { name: 'brl', label: 'Custo (BRL)', field: 'brl', align: 'right' },
-  { name: 'share', label: '% do pico (tokens)', field: 'tokens', align: 'left' }
+  { name: 'brl', label: 'Custo (BRL)', field: 'brl', align: 'right' }
 ]
 
-// rows com BRL calculado
-const dailyUsageComputed = computed(() => {
-  const rate = usdToBrlRate.value
-  return dailyUsage.value.map(d => ({
+const dailyUsageComputed = computed(() =>
+  dailyUsage.value.map(d => ({
     ...d,
-    brl: (Number(d.usd) || 0) * rate
+    brl: (d.usd || 0) * usdToBrlRate.value
   }))
-})
-
-// --- GRÁFICO (SVG) ---
-const chartWidth = 100
-const chartHeight = 40
-const chartPaddingY = 6 // padding vertical pra nao “colar” topo/fundo
-
-const maxTokensDay = computed(() => {
-  if (!dailyUsage.value.length) return 1
-  return Math.max(...dailyUsage.value.map(d => d.tokens || 0))
-})
-
-const linePoints = computed(() => {
-  const max = maxTokensDay.value || 1
-  const n = dailyUsage.value.length || 1
-  const usableHeight = chartHeight - chartPaddingY * 2
-
-  return dailyUsage.value.map((d, idx) => {
-    const x = n === 1 ? chartWidth / 2 : (idx / (n - 1)) * chartWidth
-    const normalized = (d.tokens || 0) / max
-    const y = chartPaddingY + (1 - normalized) * usableHeight
-    return { x, y }
-  })
-})
-
-const linePointsAttr = computed(() =>
-  linePoints.value.map(p => `${p.x},${p.y}`).join(' ')
 )
 
-const areaPointsAttr = computed(() => {
-  if (!linePoints.value.length) return ''
-  const first = linePoints.value[0]
-  const last = linePoints.value[linePoints.value.length - 1]
-  const baselineY = chartHeight - chartPaddingY
+/* ----------------------------------------
+      GRÁFICO BAR (tokens)
+----------------------------------------- */
+const barChartData = computed(() => ({
+  labels: dailyUsage.value.map(d => formatShortDate(d.date)),
+  datasets: [
+    {
+      label: 'Tokens',
+      data: dailyUsage.value.map(d => d.tokens || 0),
+      backgroundColor: '#22c55e88',
+      borderColor: '#22c55e',
+      borderWidth: 2,
+      borderRadius: 8
+    }
+  ]
+}))
 
-  return [
-    `${first.x},${baselineY}`,
-    ...linePoints.value.map(p => `${p.x},${p.y}`),
-    `${last.x},${baselineY}`
-  ].join(' ')
-})
+const barChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    y: {
+      ticks: { color: '#bbf7d0' },
+      grid: { color: '#1f293780' }
+    },
+    x: {
+      ticks: { color: '#bbf7d0' },
+      grid: { display: false }
+    }
+  }
+}
 
-// --- FORMATADORES ---
-function formatUsd (value) {
-  const v = Number(value || 0)
+/* ----------------------------------------
+      GRÁFICO PIZZA (USD)
+----------------------------------------- */
+const pieChartData = computed(() => ({
+  labels: dailyUsage.value.map(d => formatShortDate(d.date)),
+  datasets: [
+    {
+      data: dailyUsage.value.map(d => d.usd || 0),
+      backgroundColor: [
+        '#22c55e',
+        '#2dd4bf',
+        '#3b82f6',
+        '#a855f7',
+        '#f472b6',
+        '#fb923c',
+        '#facc15'
+      ]
+    }
+  ]
+}))
+
+const pieChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      labels: { color: '#e5e7eb' }
+    }
+  }
+}
+
+/* ----------------------------------------
+  FORMATADORES
+----------------------------------------- */
+function formatUsd(v) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 4
-  }).format(v)
+  }).format(v || 0)
 }
-
-function formatBRL (value) {
-  const v = Number(value || 0)
+function formatBRL(v) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(v)
+  }).format(v || 0)
 }
-
-function formatNumber (value) {
-  return new Intl.NumberFormat('pt-BR', {
-    maximumFractionDigits: 0
-  }).format(Number(value || 0))
+function formatNumber(v) {
+  return new Intl.NumberFormat('pt-BR').format(v || 0)
 }
-
-function formatDate (isoDate) {
-  const d = new Date(isoDate)
-  if (Number.isNaN(d.getTime())) return isoDate
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+function formatShortDate(iso) {
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
-
-function formatShortDate (isoDate) {
-  const d = new Date(isoDate)
-  if (Number.isNaN(d.getTime())) return isoDate
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-}
-
-const lastUpdatedLabel = computed(() => {
-  const last = dailyUsage.value[dailyUsage.value.length - 1]
-  if (!last) return '-'
-  const d = new Date(last.date)
-  if (Number.isNaN(d.getTime())) return '-'
-  return d.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit'
-  })
-})
 
 const hasRealData = computed(() => dailyUsage.value.length > 0)
+const lastUpdatedLabel = computed(() => {
+  const last = dailyUsage.value[dailyUsage.value.length - 1]
+  return last ? formatShortDate(last.date) : '-'
+})
 </script>
 
 <style scoped>
@@ -568,34 +376,13 @@ const hasRealData = computed(() => dailyUsage.value.length > 0)
   min-height: 130px;
 }
 
-/* Gráfico – altura menor pra não ficar tão esticado */
-.chart-wrapper {
-  width: 100%;
-  height: 150px;
-  border-radius: 14px;
-  background: radial-gradient(circle at top left,
-  #0A0F13,
-  #0A0F13);
-  padding: 12px;
-}
-
-.chart-svg {
-  width: 100%;
-  height: 100%;
-}
-
-/* Tabela */
 .wallet-table :deep(thead tr) {
-  background: #424242
+  background: #424242;
 }
-
 .wallet-table :deep(th) {
   color: #e5e7eb;
-  font-weight: 500;
 }
-
 .wallet-table :deep(td) {
-  color: #e5e7eb;
-  border-color: rgba(55, 65, 81, 0.8);
+  color: #000000;
 }
 </style>

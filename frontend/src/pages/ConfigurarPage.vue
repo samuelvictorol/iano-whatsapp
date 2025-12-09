@@ -70,7 +70,7 @@
               :loading="startSessionLoading"
               :disable="!canClickMainAction || startSessionLoading"
               class="q-pa-md"
-              to="/iniciar"
+              @click="startSession"
             />
           </div>
         </div>
@@ -853,7 +853,7 @@ const humanHoldMs = ref(300000)        // default 300000
 const aiContext = ref('')
 const aiRules = ref('')
 const aiMetadata = ref('')
-const botName = ref('Bot')
+const botName = ref('IANO Bot')
 
 // --- FORM 3: Dados (itens) ---
 const newItem = ref({
@@ -947,7 +947,7 @@ const syncAIAndDataToBackend = async (showSuccess = true) => {
       AI_CONTEXT: aiContext.value,
       AI_RULES: aiRules.value,
       AI_METADATA: aiMetadata.value,
-      BOT_NAME: botName.value || 'Bot'
+      BOT_NAME: botName.value || 'IANO Bot'
     },
     data: Array.isArray(dataItems.value) ? dataItems.value : []
   }
@@ -1010,7 +1010,7 @@ const loadAIAndDataFromBackend = async () => {
         aiContext.value = a.AI_CONTEXT || aiContext.value
         aiRules.value = a.AI_RULES || aiRules.value
         aiMetadata.value = a.AI_METADATA || aiMetadata.value
-        botName.value = a.BOT_NAME || botName.value || 'Bot'
+        botName.value = a.BOT_NAME || botName.value || 'IANO Bot'
       }
 
       if (Array.isArray(cfg.data)) {
@@ -1081,7 +1081,7 @@ const saveAIConfig = async () => {
       AI_CONTEXT: aiContext.value,
       AI_RULES: aiRules.value,
       AI_METADATA: aiMetadata.value,
-      BOT_NAME: botName.value || 'Bot'
+      BOT_NAME: botName.value || 'IANO Bot'
     }
     localStorage.setItem(STORAGE_KEYS.ai, JSON.stringify(payload))
 
@@ -1099,7 +1099,7 @@ const resetAIConfig = () => {
   aiContext.value = ''
   aiRules.value = ''
   aiMetadata.value = ''
-  botName.value = 'Bot'
+  botName.value = 'IANO Bot'
 
   const payload = {
     IA_CONTEXT_MAX_MINUTES: iaContextMinutes.value,
@@ -1233,7 +1233,7 @@ const exportConfigToFile = () => {
         AI_CONTEXT: aiContext.value,
         AI_RULES: aiRules.value,
         AI_METADATA: aiMetadata.value,
-        BOT_NAME: botName.value || 'Bot'
+        BOT_NAME: botName.value || 'IANO Bot'
       },
       data: Array.isArray(dataItems.value) ? dataItems.value : []
     }
@@ -1292,7 +1292,7 @@ function sanitizeImportedConfig (raw) {
       AI_CONTEXT: '',
       AI_RULES: '',
       AI_METADATA: '',
-      BOT_NAME: 'Bot'
+      BOT_NAME: 'IANO Bot'
     },
     data: []
   }
@@ -1314,7 +1314,7 @@ function sanitizeImportedConfig (raw) {
     out.ai.AI_CONTEXT = String(a.AI_CONTEXT || '')
     out.ai.AI_RULES = String(a.AI_RULES || '')
     out.ai.AI_METADATA = String(a.AI_METADATA || '')
-    out.ai.BOT_NAME = String(a.BOT_NAME || 'Bot')
+    out.ai.BOT_NAME = String(a.BOT_NAME || 'IANO Bot')
   }
 
   if (Array.isArray(raw.data)) {
@@ -1356,7 +1356,7 @@ const handleFileChange = (evt) => {
       aiContext.value = cfg.ai.AI_CONTEXT || ''
       aiRules.value = cfg.ai.AI_RULES || ''
       aiMetadata.value = cfg.ai.AI_METADATA || ''
-      botName.value = cfg.ai.BOT_NAME || 'Bot'
+      botName.value = cfg.ai.BOT_NAME || 'IANO Bot'
 
       dataItems.value = cfg.data || []
 
@@ -1491,7 +1491,7 @@ onMounted(async () => {
       aiContext.value = parsed.AI_CONTEXT || ''
       aiRules.value = parsed.AI_RULES || ''
       aiMetadata.value = parsed.AI_METADATA || ''
-      botName.value = parsed.BOT_NAME || 'Bot'
+      botName.value = parsed.BOT_NAME || 'IANO Bot'
     }
 
     const rawData = localStorage.getItem(STORAGE_KEYS.data)
