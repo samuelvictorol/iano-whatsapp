@@ -13,7 +13,7 @@
             <div class="col-12 col-md-5">
               <div class="doc-video-wrapper q-mb-md">
                 <div class="text-caption text-grey q-mb-xs">
-                  Demonstração
+                  <!-- Demonstração -->
                 </div>
                 <q-video :ratio="16 / 9" :src="heroVideoUrl" class="doc-video" />
               </div>
