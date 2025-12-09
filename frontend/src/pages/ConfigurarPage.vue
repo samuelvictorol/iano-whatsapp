@@ -1,10 +1,10 @@
 <template>
   <q-page class="q-pa-md">
+    <q-breadcrumbs>
+      <q-breadcrumbs-el class="text-grey" label="Início" icon="home" to="/" />
+      <q-breadcrumbs-el class="text-green-14 " label="Configurações" icon="settings" to="/configurar" />
+    </q-breadcrumbs>
     <div class="settings-page">
-      <q-breadcrumbs>
-        <q-breadcrumbs-el class="text-grey" label="Início" icon="home" to="/" />
-        <q-breadcrumbs-el class="text-green-14 " label="Configurações" icon="settings" to="/configurar" />
-      </q-breadcrumbs>
 
       <!-- Header -->
       <div class="q-mb-lg">
@@ -103,7 +103,7 @@
 
             <q-item-section>
               <div class="text-body1 text-white">
-                Configurar OpenAI & Mongo
+                Configurar Chaves
               </div>
               <div v-if="apiExpanded" class="text-caption text-grey-6">
                 Chaves de API, modelos e conexão com banco. <strong>Obrigatório</strong> para rodar o bot.
@@ -295,7 +295,7 @@
 
             <q-item-section>
               <div class="text-body1 text-white">
-                Configurações da IA
+                Personalizar I.A
               </div>
               <div v-if="aiExpanded" class="text-caption text-grey-6">
                 Contexto, cooldown humano, nome do bot e prompts. Salvos em banco e aplicados em tempo real.
