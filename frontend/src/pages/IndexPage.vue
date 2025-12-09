@@ -1,10 +1,10 @@
 <!-- DocPage.vue -->
 <template>
   <q-page class="q-pa-md">
+    <q-breadcrumbs>
+      <q-breadcrumbs-el class="text-green-14" label="Início" icon="home" to="/" />
+    </q-breadcrumbs>
     <div class="doc-page">
-      <q-breadcrumbs>
-        <q-breadcrumbs-el class="text-green-14" label="Início" icon="home" to="/" />
-      </q-breadcrumbs>
       
       <!-- HERO / CABEÇALHO -->
       <q-card class="q-my-md shadow section-card doc-hero">
@@ -99,7 +99,7 @@
                   O que é o IanoWhatsapp?
                 </div>
                 <div class="doc-section-subtitle q-mb-md">
-                  Um engine de automação focado em WhatsApp que centraliza IA, histórico de conversas,
+                  Um engine de automação focado em WhatsApp que centraliza IA, disparo de mensagens,
                   catálogo de produtos/serviços e integrações HTTP em um único backend em Node.js —
                   pronto para virar seu SaaS multi-cliente.
                 </div>

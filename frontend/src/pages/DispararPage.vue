@@ -208,7 +208,7 @@
 
               <!-- TAB UPLOAD ARQUIVO -->
               <q-tab-panel name="upload" class="q-pa-none q-pt-sm">
-                <q-file v-model="bulkForm.file" outlined dense class="bg-grey-8 rounded-borders q-mb-sm"
+                <q-file v-model="bulkForm.file" outlined dense class="bg-grey rounded-borders q-mb-sm"
                   label="Arquivo para enviar (imagem / PDF / etc)" clearable use-chips
                   accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                   <template #prepend>
@@ -871,9 +871,5 @@ code {
   background: radial-gradient(circle at top left,
       rgba(30, 64, 175, 0.25),
       transparent 60%);
-}
-.q-page {
-  max-width: 1100px;
-  margin: 0 auto;
 }
 </style>

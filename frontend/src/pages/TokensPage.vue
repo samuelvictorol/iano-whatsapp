@@ -26,10 +26,6 @@
             <div class="text-h5 text-weight-bold text-white q-mb-xs">
               💳 Wallet de Tokens
             </div>
-            <div class="text-grey-4">
-              Acompanhe o consumo de tokens da sua OpenAI API KEY e o custo aproximado em dólar e real.
-            </div>
-
             <div class="q-mt-sm text-grey-5">
               <q-badge
                 v-if="hasRealData"
@@ -568,12 +564,6 @@ const hasRealData = computed(() => dailyUsage.value.length > 0)
 </script>
 
 <style scoped>
-.q-page {
-  max-width: 1100px;
-  margin: 0 auto;
-  position: relative;
-}
-
 .summary-card {
   min-height: 130px;
 }

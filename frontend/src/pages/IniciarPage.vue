@@ -2,6 +2,12 @@
 <template>
   <q-page class="ia-page">
     <div class="ia-root">
+      <q-breadcrumbs class="q-pb-md q-pt-xs">
+        <q-breadcrumbs-el class="text-grey" label="Início" icon="home" to="/" />
+        <q-breadcrumbs-el class="text-grey" label="Configurações" icon="settings" to="/configurar" />
+        <q-breadcrumbs-el class="text-green-14 " label="Iniciar" icon="play_circle" to="/iniciar" />
+      </q-breadcrumbs>
+      
       <!-- CONTEÚDO PRINCIPAL -->
       <main class="ia-main">
         <!-- COL ESQUERDA: QR + LOGS -->
