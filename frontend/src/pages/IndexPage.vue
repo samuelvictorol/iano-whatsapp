@@ -5,7 +5,7 @@
       <q-breadcrumbs-el class="text-green-14" label="Início" icon="home" to="/" />
     </q-breadcrumbs>
     <div class="doc-page">
-      
+
       <!-- HERO / CABEÇALHO -->
       <q-card class="q-my-md shadow section-card doc-hero">
         <q-card-section>
@@ -53,7 +53,11 @@
                 <div class="text-caption text-grey q-mb-xs">
                   Demonstração
                 </div>
-                <q-video :ratio="16 / 9" :src="heroVideoUrl" class="doc-video" />
+                <video class="doc-video" controls playsinline style="width: 100%; border-radius: 10px;">
+                  <source :src="heroVideoUrl" type="video/mp4" />
+                  Seu navegador não suporta vídeos MP4.
+                </video>
+
               </div>
 
             </div>
@@ -832,8 +836,7 @@ import { ref } from 'vue'
 
 const activeTab = ref('sobre')
 
-// Substitua pela URL do seu vídeo de demo (YouTube embed ou outro)
-const heroVideoUrl = ref('https://www.youtube.com/embed/SEU_VIDEO_AQUI')
+const heroVideoUrl = ref('/vsl.mp4')
 
 function openGithub() {
   window.open('https://github.com/samuelvictorol/iano-whatsapp', '_blank')

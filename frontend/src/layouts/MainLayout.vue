@@ -82,22 +82,28 @@ function onClickIniciarTab(evt) {
 onMounted(() => {
   // ao carregar a app, já tenta pintar corretamente
   canStart.value = hasRequiredConfig()
-  $q.dialog({
-    title: '🤖 IanoWhatsapp, Bem Vindo(a)!',
-    message: `Essa é uma demonstração não funcional da IanoWhatsapp. Para versão completa acesse o link abaixo:`,
-    class: 'text-white',
-    cancel: {
-      label: 'Pular',
-      color: 'accent',
-      outline: true,
+$q.notify({
+  type: 'info',
+  color: 'dark',
+  position: 'top',
+  textColor: 'white',
+  icon: 'mdi-robot-happy-outline',
+  message: 'Demonstração IanoWhatsapp',
+  caption: 'Acesse a versão completa no GitHub.',
+  timeout: 0, // só fecha manualmente
+  actions: [
+    {
+      label: 'Abrir GitHub',
+      icon: 'mdi-github',
+      color: 'green-3',
+      handler: () => window.open('https://github.com/samuelvictorol/iano-whatsapp/', '_blank')
     },
-    ok: {
-      label: 'Versão Completa',
-      color: 'white',
-      glossy: true,
-      textColor: 'primary',
-      iconRight: 'mdi-github',
-    },
-  }).onOk(()=> window.open('https://github.com/samuelvictorol/iano-whatsapp/', '_blank'))
+    {
+      label: 'Fechar',
+      color: 'red-5',
+      handler: () => {}
+    }
+  ]
+})
 })
 </script>
