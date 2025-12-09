@@ -5,12 +5,20 @@
       <q-breadcrumbs-el class="text-green-14" label="Início" icon="home" to="/" />
     </q-breadcrumbs>
     <div class="doc-page">
-      
+
       <!-- HERO / CABEÇALHO -->
       <q-card class="q-my-md shadow section-card doc-hero">
         <q-card-section>
           <div class="row items-center justify-between q-col-gutter-md">
-            <!-- COL ESQUERDA: TÍTULO / COPY -->
+            <div class="col-12 col-md-5">
+              <div class="doc-video-wrapper q-mb-md">
+                <div class="text-caption text-grey q-mb-xs">
+                  Demonstração
+                </div>
+                <q-video :ratio="16 / 9" :src="heroVideoUrl" class="doc-video" />
+              </div>
+
+            </div>
             <div class="col-12 col-md-7">
               <div class="text-h4 text-weight-bold text-white q-mb-xs row items-center">
                 <q-icon name="mdi-whatsapp" class="q-pr-sm" /> IanoWhatsapp
@@ -46,17 +54,6 @@
                 </q-chip>
               </div>
             </div>
-
-            <!-- COL DIREITA: VÍDEO DEMO / PAYLOAD -->
-            <div class="col-12 col-md-5">
-              <div class="doc-video-wrapper q-mb-md">
-                <div class="text-caption text-grey q-mb-xs">
-                  Demonstração
-                </div>
-                <q-video :ratio="16 / 9" :src="heroVideoUrl" class="doc-video" />
-              </div>
-
-            </div>
           </div>
         </q-card-section>
 
@@ -69,8 +66,8 @@
             <div class="col-auto">
               <div class="row q-gutter-sm">
                 <q-btn outline icon="mdi-github" label="Repositório no GitHub" class="text-white" @click="openGithub" />
-                <q-btn outline icon-right="mdi-robot-happy-outline" label="Configurar minha I.A"
-                  class="text-accent text-weight-bold" to="/configurar" />
+                <q-btn icon-right="mdi-robot-happy-outline" label="Configurar minha I.A"
+                  class="bg-accent glossy text-weight-bold" to="/configurar" />
               </div>
             </div>
           </div>
@@ -833,7 +830,7 @@ import { ref } from 'vue'
 const activeTab = ref('sobre')
 
 // Substitua pela URL do seu vídeo de demo (YouTube embed ou outro)
-const heroVideoUrl = ref('https://www.youtube.com/embed/SEU_VIDEO_AQUI')
+const heroVideoUrl = ref('https://iano-whatsapp-frontend.onrender.com/vsl.mp4')
 
 function openGithub() {
   window.open('https://github.com/samuelvictorol/iano-whatsapp', '_blank')
